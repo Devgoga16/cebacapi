@@ -11,10 +11,11 @@
 using System;
 using System.Reflection;
 
+[assembly: Microsoft.Extensions.Configuration.UserSecrets.UserSecretsIdAttribute("7f48ebe8-de8b-49fe-8c7f-45b81c7ec570")]
 [assembly: System.Reflection.AssemblyCompanyAttribute("UnifyAPI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+655702fd123b1eaa0d7c08227f5f9d68c37248ad")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4610c93eb6b150d737d8bbcbef299dd2ab5413df")]
 [assembly: System.Reflection.AssemblyProductAttribute("UnifyAPI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("UnifyAPI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
