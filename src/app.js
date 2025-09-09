@@ -1,6 +1,7 @@
 const errorHandler = require('./middlewares/errorHandler');
 require('./config/db');
 const express = require('express');
+const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
 const rolesRoutes = require('./routes/rolesRoutes');
@@ -20,6 +21,7 @@ const aulaalumnosRoutes = require('./routes/aulaalumnosRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 const port = process.env.PORT || 3000;
 

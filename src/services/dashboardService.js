@@ -35,7 +35,7 @@ exports.getAlumnoDashboard = async (id_persona) => {
   let anuncios = await Anuncio.find({
     roles: { $in: [rol._id] },
     fecha_caducidad: { $gte: hoy },
-  });
+  }).populate('id_categoria_anuncio roles id_publicador');
 
   return {
     cicloActual,
@@ -75,7 +75,7 @@ exports.getDocenteDashboard = async (id_persona) => {
   let anuncios = await Anuncio.find({
     roles: { $in: [rol._id] },
     fecha_caducidad: { $gte: hoy },
-  });
+  }).populate('id_categoria_anuncio roles id_publicador');
 
   return {
     cicloActual,
