@@ -1,14 +1,16 @@
 const Usuario = require('../models/usuario');
 const Persona = require('../models/persona');
 const Rol = require('../models/rol');
+const bcrypt = require('bcrypt');
 
 exports.login = async (username, password) => {
   // Buscar usuario por username
   const usuario = await Usuario.findOne({ username });
   if (!usuario) return null;
 
-  // Verificar password en texto plano
-  if (usuario.password !== password) return null;
+  // Verificar password con bcrypt
+  const valid = await bcrypt.compare(password, usuario.password);
+  if (!valid) return null;
 
   // Traer datos de persona
   const persona = await Persona.findOne({ id_user: usuario._id });
