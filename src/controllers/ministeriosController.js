@@ -20,6 +20,15 @@ exports.getMinisterioById = async (req, res, next) => {
   }
 };
 
+exports.getMinisteriosByIglesia = async (req, res, next) => {
+  try {
+    const ministerios = await ministeriosService.getMinisteriosByIglesia(req.params.id);
+    sendResponse(res, { data: ministerios });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.createMinisterio = async (req, res, next) => {
   try {
     const newMinisterio = await ministeriosService.createMinisterio(req.body);

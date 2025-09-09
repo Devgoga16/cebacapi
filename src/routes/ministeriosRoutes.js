@@ -103,6 +103,52 @@ router.get('/ministerios', ministeriosController.getAllMinisterios);
 router.get('/ministerios/:id', ministeriosController.getMinisterioById);
 /**
  * @swagger
+ * /ministeriosbyiglesia/{id}:
+ *   get:
+ *     summary: Obtiene todos los ministerios de una iglesia
+ *     tags: [Ministerios]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID de la iglesia
+ *     responses:
+ *       200:
+ *         description: Ministerio encontrado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/Ministerio'
+ *                 message:
+ *                   type: string
+ *                 action_code:
+ *                   type: integer
+ *       404:
+ *         description: Ministerio no encontrado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   type: 'null'
+ *                 message:
+ *                   type: string
+ *                 action_code:
+ *                   type: integer
+ */
+router.get('/ministeriosbyiglesia/:id', ministeriosController.getMinisteriosByIglesia);
+/**
+ * @swagger
  * /ministerios:
  *   post:
  *     summary: Crea un nuevo ministerio

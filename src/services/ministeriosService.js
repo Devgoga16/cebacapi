@@ -8,6 +8,10 @@ exports.getMinisterioById = async (id) => {
   return await Ministerio.findById(id).populate('id_iglesia');
 };
 
+exports.getMinisteriosByIglesia = async (id_iglesia) => {
+  return await Ministerio.find({ id_iglesia }).populate('id_iglesia');
+};
+
 exports.createMinisterio = async (data) => {
   const ministerio = new Ministerio(data);
   return await ministerio.save();
