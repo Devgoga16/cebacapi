@@ -130,6 +130,55 @@ router.get('/personas/:id', personasController.getPersonaById);
 
 /**
  * @swagger
+ * /personas/rol/{nombre_rol}:
+ *   get:
+ *     summary: Obtiene todas las personas por nombre de rol
+ *     tags: [Personas]
+ *     parameters:
+ *       - in: path
+ *         name: nombre_rol
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Nombre del rol (ej. "Administrador", "Líder", etc.)
+ *     responses:
+ *       200:
+ *         description: Lista de personas encontradas con el rol indicado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Persona'
+ *                 message:
+ *                   type: string
+ *                 action_code:
+ *                   type: integer
+ *       404:
+ *         description: No se encontraron personas con ese rol
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   type: 'null'
+ *                 message:
+ *                   type: string
+ *                 action_code:
+ *                   type: integer
+ */
+router.get('/personas/rol/:nombre_rol', personasController.getAllPersonasByRol);
+
+/**
+ * @swagger
  * /personas:
  *   post:
  *     summary: Crea una nueva persona

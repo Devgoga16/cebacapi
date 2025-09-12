@@ -10,6 +10,16 @@ exports.getAllPersonas = async (req, res, next) => {
   }
 };
 
+exports.getAllPersonasByRol = async (req, res, next) => {
+  try {
+    const personas = await personasService.getPersonasByRol(req.params.nombre_rol);
+    sendResponse(res, { data: personas });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
 exports.getPersonaById = async (req, res, next) => {
   try {
     const persona = await personasService.getPersonaById(req.params.id);

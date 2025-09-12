@@ -11,6 +11,47 @@ exports.getAllPersonas = async () => {
     });
 };
 
+exports.getPersonasByRol = async (nombreRol) => {
+  const personas = await Persona.aggregate([
+    {
+      $lookup: {
+        from: "usuarios",
+        localField: "id_user",
+        foreignField: "_id",
+        as: "usuario"
+      }
+    },
+    { $unwind: "$usuario" },
+    {
+      $lookup: {
+        from: "roles",
+        localField: "usuario.roles",
+        foreignField: "_id",
+        as: "roles"
+      }
+    },
+    { $unwind: "$roles" },
+    {
+      $match: { "roles.nombre_rol": nombreRol }
+    },
+    {
+      $project: {
+        _id: 1,
+        nombres: 1,
+        apellidos: 1,
+        numero_documento: 1,
+        usuario: "$usuario.username",
+        rol: "$roles.nombre_rol"
+      }
+    }
+  ]);
+  return personas;
+};
+
+
+
+
+
 exports.getPersonaById = async (id) => {
   return await Persona.findById(id).populate('id_user id_ministerio');
 };
