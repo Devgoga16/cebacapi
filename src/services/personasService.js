@@ -48,10 +48,6 @@ exports.getPersonasByRol = async (nombreRol) => {
   return personas;
 };
 
-
-
-
-
 exports.getPersonaById = async (id) => {
   return await Persona.findById(id).populate('id_user id_ministerio');
 };
