@@ -2,12 +2,15 @@ const Persona = require('../models/persona');
 
 exports.getAllPersonas = async () => {
   return await Persona.find()
-    .populate('id_user') // primer populate normal
+    // Populate usuario y, dentro, sus roles
+    .populate({
+      path: 'id_user',
+      populate: { path: 'roles' }
+    })
+    // Populate ministerio y su iglesia
     .populate({
       path: 'id_ministerio',
-      populate: {
-        path: 'id_iglesia'
-      }
+      populate: { path: 'id_iglesia' }
     });
 };
 
@@ -49,7 +52,15 @@ exports.getPersonasByRol = async (nombreRol) => {
 };
 
 exports.getPersonaById = async (id) => {
-  return await Persona.findById(id).populate('id_user id_ministerio');
+  return await Persona.findById(id)
+    .populate({
+      path: 'id_user',
+      populate: { path: 'roles' }
+    })
+    .populate({
+      path: 'id_ministerio',
+      populate: { path: 'id_iglesia' }
+    });
 };
 
 exports.createPersona = async (data) => {
@@ -58,7 +69,15 @@ exports.createPersona = async (data) => {
 };
 
 exports.updatePersona = async (id, data) => {
-  return await Persona.findByIdAndUpdate(id, data, { new: true }).populate('id_user id_ministerio');
+  return await Persona.findByIdAndUpdate(id, data, { new: true })
+    .populate({
+      path: 'id_user',
+      populate: { path: 'roles' }
+    })
+    .populate({
+      path: 'id_ministerio',
+      populate: { path: 'id_iglesia' }
+    });
 };
 
 exports.deletePersona = async (id) => {
