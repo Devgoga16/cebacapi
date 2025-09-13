@@ -12,9 +12,14 @@ const PersonaSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    apellidos: {
+    apellido_paterno: {
       type: String,
       required: true,
+      trim: true,
+    },
+    apellido_materno: {
+      type: String,
+      required: false,
       trim: true,
     },
     fono: {

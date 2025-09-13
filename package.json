@@ -5,7 +5,8 @@
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
-    "dev": "nodemon src/app.js"
+    "dev": "nodemon src/app.js",
+    "migrate:persona-apellidos": "node scripts/migrate_persona_apellidos.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

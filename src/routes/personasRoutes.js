@@ -23,7 +23,9 @@ const personasController = require('../controllers/personasController');
  *           description: ID del usuario (ObjectId)
  *         nombres:
  *           type: string
- *         apellidos:
+ *         apellido_paterno:
+ *           type: string
+ *         apellido_materno:
  *           type: string
  *         telefono:
  *           type: string
