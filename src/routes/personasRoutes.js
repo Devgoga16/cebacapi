@@ -15,6 +15,18 @@ const personasController = require('../controllers/personasController');
  *   schemas:
  *     Persona:
  *       type: object
+ *       required:
+ *         - nombres
+ *         - email
+ *         - apellido_paterno
+ *         - apellido_materno
+ *         - fono
+ *         - direccion
+ *         - fecha_nacimiento
+ *         - numero_documento
+ *         - estado_civil
+ *         - fecha_bautismo
+ *         - fecha_conversion
  *       properties:
  *         _id:
  *           type: string
@@ -23,11 +35,13 @@ const personasController = require('../controllers/personasController');
  *           description: ID del usuario (ObjectId)
  *         nombres:
  *           type: string
+ *         email:
+ *           type: string
  *         apellido_paterno:
  *           type: string
  *         apellido_materno:
  *           type: string
- *         telefono:
+ *         fono:
  *           type: string
  *         direccion:
  *           type: string

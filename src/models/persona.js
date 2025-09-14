@@ -5,12 +5,18 @@ const PersonaSchema = new mongoose.Schema(
     id_user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Usuario',
-      required: true,
+      required: false,
     },
     nombres: {
       type: String,
       required: true,
       trim: true,
+    },
+    email: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true,
     },
     apellido_paterno: {
       type: String,
@@ -19,22 +25,22 @@ const PersonaSchema = new mongoose.Schema(
     },
     apellido_materno: {
       type: String,
-      required: false,
+      required: true,
       trim: true,
     },
     fono: {
       type: String,
-      required: false,
+      required: true,
       trim: true,
     },
     direccion: {
       type: String,
-      required: false,
+      required: true,
       trim: true,
     },
     fecha_nacimiento: {
       type: Date,
-      required: false,
+      required: true,
     },
     numero_documento: {
       type: String,
@@ -45,15 +51,15 @@ const PersonaSchema = new mongoose.Schema(
     estado_civil: {
       type: String,
       enum: ['Soltero', 'Casado', 'Divorciado', 'Viudo', 'Otro'],
-      required: false,
+      required: true,
     },
     fecha_bautismo: {
       type: Date,
-      required: false,
+      required: true,
     },
     fecha_conversion: {
       type: Date,
-      required: false,
+      required: true,
     },
     id_ministerio: {
       type: mongoose.Schema.Types.ObjectId,
@@ -62,6 +68,7 @@ const PersonaSchema = new mongoose.Schema(
     },
     otra_denominacion: {
       type: String,
+      required: false,
       trim: true,
     }
   },

@@ -41,6 +41,7 @@ exports.getPersonasByRol = async (nombreRol) => {
       $project: {
         _id: 1,
         nombres: 1,
+        email: 1,
         apellido_paterno: 1,
         apellido_materno: 1,
         numero_documento: 1,
