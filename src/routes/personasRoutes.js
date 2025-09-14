@@ -20,7 +20,7 @@ const personasController = require('../controllers/personasController');
  *         - email
  *         - apellido_paterno
  *         - apellido_materno
- *         - fono
+ *         - telefono
  *         - direccion
  *         - fecha_nacimiento
  *         - numero_documento
@@ -41,7 +41,7 @@ const personasController = require('../controllers/personasController');
  *           type: string
  *         apellido_materno:
  *           type: string
- *         fono:
+ *         telefono:
  *           type: string
  *         direccion:
  *           type: string

@@ -28,7 +28,7 @@ const PersonaSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    fono: {
+    telefono: {
       type: String,
       required: true,
       trim: true,
