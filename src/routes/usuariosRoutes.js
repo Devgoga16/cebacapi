@@ -117,6 +117,10 @@ router.get('/usuarios/:id', usuariosController.getUsuarioById);
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - username
+ *               - password
+ *               - id_persona
  *             properties:
  *               username:
  *                 type: string
@@ -126,6 +130,9 @@ router.get('/usuarios/:id', usuariosController.getUsuarioById);
  *                 type: array
  *                 items:
  *                   type: string
+ *               id_persona:
+ *                 type: string
+ *                 description: ID de la persona a vincular; se actualizará su campo id_user con el usuario creado
  *     responses:
  *       201:
  *         description: Usuario creado
