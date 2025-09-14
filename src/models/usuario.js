@@ -18,6 +18,14 @@ const UsuarioSchema = new mongoose.Schema(
         ref: "Rol", // el nombre del modelo de tu colección roles
       },
     ],
+    active: {
+      type: Boolean,
+      default: true,
+    },
+    validado: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     collection: "usuarios",

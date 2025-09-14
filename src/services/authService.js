@@ -5,8 +5,14 @@ const bcrypt = require('bcrypt');
 
 exports.login = async (username, password) => {
   // Buscar usuario por username
+
   const usuario = await Usuario.findOne({ username });
   if (!usuario) return null;
+  if (usuario.validado === false) {
+    const err = new Error('Usuario no validado');
+    err.statusCode = 403;
+    throw err;
+  }
 
   // Verificar password con bcrypt
   const valid = await bcrypt.compare(password, usuario.password);
