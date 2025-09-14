@@ -1,5 +1,6 @@
 const Usuario = require('../models/usuario');
 const Persona = require('../models/persona');
+const Rol = require('../models/rol');
 const bcrypt = require('bcrypt');
 
 exports.getAllUsuarios = async () => {
@@ -21,18 +22,28 @@ exports.createUsuario = async (data) => {
     throw err;
   }
     // Validaciones básicas
-    if (!data || !data.username || !data.password) {
+    if (!userData || !userData.username || !userData.password) {
       const err = new Error('username y password son requeridos');
       err.statusCode = 400;
       throw err;
     }
     // Unicidad de username
-    const existing = await Usuario.findOne({ username: data.username });
+    const existing = await Usuario.findOne({ username: userData.username });
     if (existing) {
       const err = new Error('El nombre de usuario ya está en uso');
       err.statusCode = 400;
       throw err;
     }
+
+  // Incluir rol por defecto "estudiante"
+  const rolEstudiante = await Rol.findOne({ nombre_rol: { $regex: /^estudiante$/i } });
+  if (!rolEstudiante) {
+    const err = new Error("No se encontró el rol por defecto 'estudiante'");
+    err.statusCode = 400;
+    throw err;
+  }
+  // Forzamos rol por defecto y no aceptamos roles del payload para este endpoint
+  userData.roles = [rolEstudiante._id];
 
   // Si se proporcionó id_persona, validar que exista y que no tenga ya un usuario asignado
   if (id_persona) {
@@ -90,7 +101,7 @@ exports.createUsuarioYPersona = async (payload) => {
   }
 
   // Validaciones básicas de usuario
-  const { username, password, roles } = usuarioInput;
+  const { username, password } = usuarioInput;
   if (!username || !password) {
     const err = new Error('username y password son requeridos');
     err.statusCode = 400;
@@ -103,12 +114,22 @@ exports.createUsuarioYPersona = async (payload) => {
     throw err;
   }
 
+  // Incluir rol por defecto "estudiante"
+  const rolEst = await Rol.findOne({ nombre_rol: { $regex: /^estudiante$/i } });
+  if (!rolEst) {
+    const err = new Error("No se encontró el rol por defecto 'estudiante'");
+    err.statusCode = 400;
+    throw err;
+  }
+  // Rol por defecto únicamente en creación combinada
+  const rolesToSave = [rolEst._id];
+
   // Hash de contraseña
   const salt = await bcrypt.genSalt(10);
   const hashed = await bcrypt.hash(password, salt);
 
   // 1) Crear Usuario
-  const createdUsuario = await new Usuario({ username, password: hashed, roles }).save();
+  const createdUsuario = await new Usuario({ username, password: hashed, roles: rolesToSave }).save();
 
   try {
     // 2) Crear Persona con id_user ya asignado

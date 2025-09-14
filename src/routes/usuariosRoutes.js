@@ -126,10 +126,6 @@ router.get('/usuarios/:id', usuariosController.getUsuarioById);
  *                 type: string
  *               password:
  *                 type: string
- *               roles:
- *                 type: array
- *                 items:
- *                   type: string
  *               id_persona:
  *                 type: string
  *                 description: ID de la persona a vincular; se actualizará su campo id_user con el usuario creado
@@ -178,10 +174,6 @@ router.post('/usuarios', usuariosController.createUsuario);
  *                     type: string
  *                   password:
  *                     type: string
- *                   roles:
- *                     type: array
- *                     items:
- *                       type: string
  *               persona:
  *                 $ref: '#/components/schemas/Persona'
  *     responses:
