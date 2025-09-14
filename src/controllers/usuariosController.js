@@ -48,3 +48,12 @@ exports.deleteUsuario = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.createUsuarioYPersona = async (req, res, next) => {
+  try {
+    const result = await usuariosService.createUsuarioYPersona(req.body);
+    res.status(201).json({ state: 'success', data: result, message: 'Usuario y Persona creados', action_code: 201 });
+  } catch (err) {
+    next(err);
+  }
+};

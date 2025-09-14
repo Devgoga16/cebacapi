@@ -20,6 +20,19 @@ exports.createUsuario = async (data) => {
     err.statusCode = 400;
     throw err;
   }
+    // Validaciones básicas
+    if (!data || !data.username || !data.password) {
+      const err = new Error('username y password son requeridos');
+      err.statusCode = 400;
+      throw err;
+    }
+    // Unicidad de username
+    const existing = await Usuario.findOne({ username: data.username });
+    if (existing) {
+      const err = new Error('El nombre de usuario ya está en uso');
+      err.statusCode = 400;
+      throw err;
+    }
 
   // Si se proporcionó id_persona, validar que exista y que no tenga ya un usuario asignado
   if (id_persona) {
@@ -65,4 +78,49 @@ exports.updateUsuario = async (id, data) => {
 exports.deleteUsuario = async (id) => {
   const result = await Usuario.findByIdAndDelete(id);
   return !!result;
+};
+
+// Crea Usuario y luego Persona enlazada (id_user) sin exigir id_persona en usuario
+exports.createUsuarioYPersona = async (payload) => {
+  const { usuario: usuarioInput, persona: personaInput } = payload || {};
+  if (!usuarioInput || !personaInput) {
+    const err = new Error('Debe enviar los objetos usuario y persona');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // Validaciones básicas de usuario
+  const { username, password, roles } = usuarioInput;
+  if (!username || !password) {
+    const err = new Error('username y password son requeridos');
+    err.statusCode = 400;
+    throw err;
+  }
+  const exists = await Usuario.findOne({ username });
+  if (exists) {
+    const err = new Error('El nombre de usuario ya está en uso');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // Hash de contraseña
+  const salt = await bcrypt.genSalt(10);
+  const hashed = await bcrypt.hash(password, salt);
+
+  // 1) Crear Usuario
+  const createdUsuario = await new Usuario({ username, password: hashed, roles }).save();
+
+  try {
+    // 2) Crear Persona con id_user ya asignado
+    const PersonaModel = require('../models/persona');
+    const personaData = { ...personaInput, id_user: createdUsuario._id };
+    const personaDoc = new PersonaModel(personaData);
+    const createdPersona = await personaDoc.save();
+
+    return { usuario: createdUsuario, persona: createdPersona };
+  } catch (err) {
+    // Rollback: si falla la creación de Persona, eliminamos el Usuario creado
+    await Usuario.findByIdAndDelete(createdUsuario._id).catch(() => {});
+    throw err;
+  }
 };

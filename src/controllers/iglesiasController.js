@@ -48,3 +48,12 @@ exports.deleteIglesia = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getIglesiasConMinisterios = async (req, res, next) => {
+  try {
+    const data = await iglesiasService.getIglesiasConMinisterios();
+    sendResponse(res, { data });
+  } catch (err) {
+    next(err);
+  }
+};

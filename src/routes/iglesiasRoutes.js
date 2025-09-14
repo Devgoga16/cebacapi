@@ -52,6 +52,50 @@ const iglesiasController = require('../controllers/iglesiasController');
 router.get('/iglesias', iglesiasController.getAllIglesias);
 /**
  * @swagger
+ * /iglesias/con-ministerios:
+ *   get:
+ *     summary: Obtiene todas las iglesias con sus ministerios asociados
+ *     tags: [Iglesias]
+ *     responses:
+ *       200:
+ *         description: Lista de iglesias con su arreglo de ministerios
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       nombre_iglesia:
+ *                         type: string
+ *                       ministerios:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             _id:
+ *                               type: string
+ *                             nombre_ministerio:
+ *                               type: string
+ *                             nombre_encargado:
+ *                               type: string
+ *                             id_iglesia:
+ *                               type: string
+ *                 message:
+ *                   type: string
+ *                 action_code:
+ *                   type: integer
+ */
+router.get('/iglesias/con-ministerios', iglesiasController.getIglesiasConMinisterios);
+/**
+ * @swagger
  * /iglesias/{id}:
  *   get:
  *     summary: Obtiene una iglesia por id

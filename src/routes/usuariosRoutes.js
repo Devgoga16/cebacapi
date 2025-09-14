@@ -154,6 +154,62 @@ router.post('/usuarios', usuariosController.createUsuario);
 
 /**
  * @swagger
+ * /usuarios/with-persona:
+ *   post:
+ *     summary: Crea un usuario y una persona en una sola llamada
+ *     tags: [Usuarios]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - usuario
+ *               - persona
+ *             properties:
+ *               usuario:
+ *                 type: object
+ *                 required:
+ *                   - username
+ *                   - password
+ *                 properties:
+ *                   username:
+ *                     type: string
+ *                   password:
+ *                     type: string
+ *                   roles:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *               persona:
+ *                 $ref: '#/components/schemas/Persona'
+ *     responses:
+ *       201:
+ *         description: Usuario y Persona creados
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     usuario:
+ *                       $ref: '#/components/schemas/Usuario'
+ *                     persona:
+ *                       $ref: '#/components/schemas/Persona'
+ *                 message:
+ *                   type: string
+ *                 action_code:
+ *                   type: integer
+ */
+router.post('/usuarios/with-persona', usuariosController.createUsuarioYPersona);
+
+/**
+ * @swagger
  * /usuarios/{id}:
  *   put:
  *     summary: Actualiza un usuario

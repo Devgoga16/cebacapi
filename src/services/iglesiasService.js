@@ -30,3 +30,17 @@ exports.deleteIglesia = async (id) => {
   const result = await Iglesia.findByIdAndDelete(id);
   return !!result;
 };
+
+// Lista todas las iglesias con su arreglo de ministerios asociados
+exports.getIglesiasConMinisterios = async () => {
+  return await Iglesia.aggregate([
+    {
+      $lookup: {
+        from: 'ministerios',
+        localField: '_id',
+        foreignField: 'id_iglesia',
+        as: 'ministerios'
+      }
+    }
+  ]);
+};
