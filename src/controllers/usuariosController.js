@@ -3,7 +3,7 @@ const { sendResponse } = require('../utils/helpers');
 
 exports.validarUsuario = async (req, res, next) => {
   try {
-    const result = await require('../services/usuariosService').validarUsuario(req.params.id);
+  const result = await require('../services/usuariosService').validarUsuario(req.params.iduser);
     res.status(200).send(`
       <html lang="es">
         <head>

@@ -6,40 +6,25 @@ const usuariosController = require('../controllers/usuariosController');
 
 /**
  * @swagger
- * /usuarios/validar/{id}:
+ * /cuenta/activar/{iduser}:
  *   get:
- *     summary: Simula la validación de una cuenta de usuario
+ *     summary: Simula la activación de una cuenta de usuario
  *     tags: [Usuarios]
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: iduser
  *         schema:
  *           type: string
  *         required: true
- *         description: ID del usuario a validar
+ *         description: ID del usuario a activar
  *     responses:
  *       200:
  *         description: Cuenta activada correctamente
  *         content:
- *           application/json:
+ *           text/html:
  *             schema:
- *               type: object
- *               properties:
- *                 state:
- *                   type: string
- *                 data:
- *                   type: object
- *                   properties:
- *                     _id:
- *                       type: string
- *                     username:
- *                       type: string
- *                     validado:
- *                       type: boolean
- *                 message:
- *                   type: string
- *                 action_code:
- *                   type: integer
+ *               type: string
+ *               example: "<html>...</html>"
  *       404:
  *         description: Usuario no encontrado
  */
