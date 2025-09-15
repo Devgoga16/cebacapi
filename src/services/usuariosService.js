@@ -1,6 +1,11 @@
-// Obtiene datos reales para mostrar en validación (no modifica el usuario)
+// Activa la cuenta: marca validado=true y devuelve datos para la página
 exports.validarUsuario = async (iduser) => {
-  const usuario = await Usuario.findById(iduser).populate('roles');
+  // Actualizamos el campo validado a true y retornamos el documento actualizado
+  const usuario = await Usuario.findByIdAndUpdate(
+    iduser,
+    { validado: true },
+    { new: true }
+  ).populate('roles');
   if (!usuario) {
     const err = new Error('Usuario no encontrado');
     err.statusCode = 404;
@@ -10,7 +15,7 @@ exports.validarUsuario = async (iduser) => {
   const persona = await Persona.findOne({ id_user: iduser });
 
   return {
-    message: 'Usuario encontrado',
+    message: 'Usuario activado',
     usuario: {
       _id: usuario._id,
       username: usuario.username,
@@ -25,6 +30,7 @@ exports.validarUsuario = async (iduser) => {
     } : null
   };
 };
+
 const Usuario = require('../models/usuario');
 const Persona = require('../models/persona');
 const Rol = require('../models/rol');
