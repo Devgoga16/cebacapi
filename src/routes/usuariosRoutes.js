@@ -43,7 +43,7 @@ const usuariosController = require('../controllers/usuariosController');
  *       404:
  *         description: Usuario no encontrado
  */
-router.get('/usuarios/validar/:id', usuariosController.validarUsuario);
+router.get('/cuenta/activar/:iduser', usuariosController.validarUsuario);
 /**
  * @swagger
  * components:
