@@ -1,3 +1,49 @@
+
+const express = require('express');
+const router = express.Router();
+const usuariosController = require('../controllers/usuariosController');
+
+
+/**
+ * @swagger
+ * /usuarios/validar/{id}:
+ *   get:
+ *     summary: Simula la validación de una cuenta de usuario
+ *     tags: [Usuarios]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID del usuario a validar
+ *     responses:
+ *       200:
+ *         description: Cuenta activada correctamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                     username:
+ *                       type: string
+ *                     validado:
+ *                       type: boolean
+ *                 message:
+ *                   type: string
+ *                 action_code:
+ *                   type: integer
+ *       404:
+ *         description: Usuario no encontrado
+ */
+router.get('/usuarios/validar/:id', usuariosController.validarUsuario);
 /**
  * @swagger
  * components:
@@ -20,9 +66,6 @@
  *         updatedAt:
  *           type: string
  */
-const express = require('express');
-const router = express.Router();
-const usuariosController = require('../controllers/usuariosController');
 
 /**
  * @swagger

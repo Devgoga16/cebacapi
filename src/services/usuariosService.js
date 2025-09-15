@@ -1,3 +1,20 @@
+// Simula la validación de cuenta
+exports.validarUsuario = async (id) => {
+  const usuario = await Usuario.findByIdAndUpdate(id, { validado: true }, { new: true });
+  if (!usuario) {
+    const err = new Error('Usuario no encontrado');
+    err.statusCode = 404;
+    throw err;
+  }
+  return {
+    message: 'Cuenta activa correctamente, ya eres parte del CEBAC',
+    usuario: {
+      _id: usuario._id,
+      username: usuario.username,
+      validado: usuario.validado,
+    }
+  };
+};
 const Usuario = require('../models/usuario');
 const Persona = require('../models/persona');
 const Rol = require('../models/rol');
