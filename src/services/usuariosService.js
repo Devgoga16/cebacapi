@@ -19,6 +19,21 @@ const Usuario = require('../models/usuario');
 const Persona = require('../models/persona');
 const Rol = require('../models/rol');
 const bcrypt = require('bcrypt');
+const axios = require('axios');
+
+// Helper: envía correo de validación (no bloqueante: errores se registran y no rompen la creación)
+async function sendValidationEmail(to, iduser) {
+  if (!to || !iduser) return;
+  const payload = {
+    to,
+    validationUrl: `http://localhost:3000/cuenta/activar/${iduser}`,
+  };
+  try {
+    await axios.post('https://unify-mail.onrender.com/send', payload, { timeout: 8000 });
+  } catch (err) {
+    console.error('No se pudo enviar el correo de validación:', err?.message || err);
+  }
+}
 
 exports.getAllUsuarios = async () => {
   return await Usuario.find().populate("roles");
@@ -63,6 +78,7 @@ exports.createUsuario = async (data) => {
   userData.roles = [rolEstudiante._id];
 
   // Si se proporcionó id_persona, validar que exista y que no tenga ya un usuario asignado
+  let personaEmail = null;
   if (id_persona) {
     const persona = await Persona.findById(id_persona);
     if (!persona) {
@@ -75,6 +91,7 @@ exports.createUsuario = async (data) => {
       err.statusCode = 400;
       throw err;
     }
+    personaEmail = persona.email || null;
   }
 
   // Hash de contraseña si viene
@@ -90,6 +107,11 @@ exports.createUsuario = async (data) => {
   // Enlazar persona <- usuario recién creado
   if (id_persona) {
     await Persona.findByIdAndUpdate(id_persona, { id_user: saved._id }, { new: true });
+  }
+
+  // Enviar correo de validación (si tenemos email)
+  if (personaEmail) {
+    await sendValidationEmail(personaEmail, saved._id);
   }
 
   return saved;
@@ -153,9 +175,12 @@ exports.createUsuarioYPersona = async (payload) => {
     const PersonaModel = require('../models/persona');
     const personaData = { ...personaInput, id_user: createdUsuario._id };
     const personaDoc = new PersonaModel(personaData);
-    const createdPersona = await personaDoc.save();
+  const createdPersona = await personaDoc.save();
 
-    return { usuario: createdUsuario, persona: createdPersona };
+  // Enviar correo de validación
+  await sendValidationEmail(createdPersona.email, createdUsuario._id);
+
+  return { usuario: createdUsuario, persona: createdPersona };
   } catch (err) {
     // Rollback: si falla la creación de Persona, eliminamos el Usuario creado
     await Usuario.findByIdAndDelete(createdUsuario._id).catch(() => {});
