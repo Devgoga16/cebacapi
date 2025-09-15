@@ -4,9 +4,12 @@ const usuariosService = require('../services/usuariosService');
 
 exports.validarUsuario = async (req, res, next) => {
   try {
-    await usuariosService.validarUsuario(req.params.iduser);
+  const result = await usuariosService.validarUsuario(req.params.iduser);
+  const fullName = result.persona ? `${result.persona.nombres} ${result.persona.apellido_paterno} ${result.persona.apellido_materno}`.trim() : result.usuario.username;
+  const email = result.persona?.email || '';
+  const rol = (result.usuario.roles && result.usuario.roles[0]) ? result.usuario.roles[0] : 'Estudiante';
 
-    const html = `<!DOCTYPE html>
+  const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
@@ -44,14 +47,14 @@ exports.validarUsuario = async (req, res, next) => {
     </div>
   </div>
   <div class="container">
-    <h1>¡Cuenta activada!</h1>
-    <p>¡Bienvenido, <b>Juan Pérez</b>! Tu cuenta ha sido activada exitosamente y ahora formas parte de nuestra comunidad educativa.</p>
+  <h1>¡Cuenta activada!</h1>
+  <p>¡Bienvenido, <b>${fullName}</b>! Tu cuenta ha sido activada exitosamente y ahora formas parte de nuestra comunidad educativa.</p>
     <div class="user-info">
-      <p><b>Correo electrónico:</b> juan.perez@email.com</p>
+  <p><b>Correo electrónico:</b> ${email || '—'}</p>
       <p><b>Fecha de activación:</b> ${new Date().toLocaleDateString('es-ES')}</p>
-      <p><b>Rol asignado:</b> Estudiante</p>
+  <p><b>Rol asignado:</b> ${rol}</p>
     </div>
-    <a href="#" class="access-btn">Acceder al portal</a>
+  <a href="https://cebac-phi.vercel.app/login" class="access-btn">Acceder al portal</a>
     <p style="margin-top:12px;">Accede a tus cursos, materiales y actividades desde el menú principal. Si tienes dudas, consulta la sección de ayuda o comunícate con el equipo de soporte.</p>
   </div>
   <div class="footer">Este mensaje es una simulación de activación de cuenta para fines educativos. CEBAC &copy; 2025</div>

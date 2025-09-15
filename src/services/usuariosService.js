@@ -1,18 +1,28 @@
-// Simula la validación de cuenta
-exports.validarUsuario = async (id) => {
-  const usuario = await Usuario.findByIdAndUpdate(id, { validado: true }, { new: true });
+// Obtiene datos reales para mostrar en validación (no modifica el usuario)
+exports.validarUsuario = async (iduser) => {
+  const usuario = await Usuario.findById(iduser).populate('roles');
   if (!usuario) {
     const err = new Error('Usuario no encontrado');
     err.statusCode = 404;
     throw err;
   }
+  // Buscar la persona asociada para obtener nombre y correo
+  const persona = await Persona.findOne({ id_user: iduser });
+
   return {
-    message: 'Cuenta activa correctamente, ya eres parte del CEBAC',
+    message: 'Usuario encontrado',
     usuario: {
       _id: usuario._id,
       username: usuario.username,
       validado: usuario.validado,
-    }
+      roles: Array.isArray(usuario.roles) ? usuario.roles.map(r => r?.nombre_rol || r) : []
+    },
+    persona: persona ? {
+      nombres: persona.nombres,
+      apellido_paterno: persona.apellido_paterno,
+      apellido_materno: persona.apellido_materno,
+      email: persona.email,
+    } : null
   };
 };
 const Usuario = require('../models/usuario');
@@ -26,7 +36,7 @@ async function sendValidationEmail(to, iduser) {
   if (!to || !iduser) return;
   const payload = {
     to,
-    validationUrl: `http://localhost:3000/cuenta/activar/${iduser}`,
+    validationUrl: `https://cebacapi.onrender.com/cuenta/activar/${iduser}`,
   };
   try {
     await axios.post('https://unify-mail.onrender.com/send', payload, { timeout: 8000 });
