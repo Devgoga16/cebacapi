@@ -9,7 +9,7 @@ exports.login = async (username, password) => {
   const usuario = await Usuario.findOne({ username });
   if (!usuario) return null;
   if (usuario.validado === false) {
-    const err = new Error('Usuario no validado');
+    const err = new Error('Debes validar tu cuenta a través del correo electrónico antes de iniciar sesión.');
     err.statusCode = 403;
     throw err;
   }
