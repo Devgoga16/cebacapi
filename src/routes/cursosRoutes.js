@@ -248,4 +248,82 @@ router.put('/cursos/:id', cursosController.updateCurso);
  */
 router.delete('/cursos/:id', cursosController.deleteCurso);
 
+/**
+ * @swagger
+ * /cursos/malla/{id_persona}:
+ *   get:
+ *     summary: Obtiene la malla curricular de una persona
+ *     tags: [Cursos]
+ *     parameters:
+ *       - in: path
+ *         name: id_persona
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID de la persona (alumno)
+ *       - in: query
+ *         name: groupBy
+ *         schema:
+ *           type: string
+ *           enum: [nivel]
+ *         required: false
+ *         description: Si se envía "nivel", agrupa los cursos por nivel
+ *     responses:
+ *       200:
+ *         description: Malla curricular con cursos y registros en aulas del alumno
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   oneOf:
+ *                     - type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           curso:
+ *                             $ref: '#/components/schemas/Curso'
+ *                           registros:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *                           total_registros:
+ *                             type: number
+ *                           tiene_registros:
+ *                             type: boolean
+ *                     - type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           nivel:
+ *                             type: object
+ *                           cursos:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 curso:
+ *                                   $ref: '#/components/schemas/Curso'
+ *                                 registros:
+ *                                   type: array
+ *                                   items:
+ *                                     type: object
+ *                                 total_registros:
+ *                                   type: number
+ *                                 tiene_registros:
+ *                                   type: boolean
+ *                           total_registros:
+ *                             type: number
+ *                           cursos_con_registros:
+ *                             type: number
+ *                 message:
+ *                   type: string
+ *                 action_code:
+ *                   type: integer
+ */
+router.get('/cursos/malla/:id_persona', cursosController.getMallaCurricularPorPersona);
+
 module.exports = router;

@@ -48,3 +48,14 @@ exports.deleteCurso = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getMallaCurricularPorPersona = async (req, res, next) => {
+  try {
+    const { id_persona } = req.params;
+    const { groupBy } = req.query || {};
+    const data = await cursosService.getMallaCurricularPorPersona(id_persona, { groupBy });
+    sendResponse(res, { data, message: 'Malla curricular obtenida' });
+  } catch (err) {
+    next(err);
+  }
+};
