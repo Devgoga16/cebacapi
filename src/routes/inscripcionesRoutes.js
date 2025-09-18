@@ -243,4 +243,78 @@ router.put('/inscripciones/:id', inscripcionesController.updateInscripcion);
  */
 router.delete('/inscripciones/:id', inscripcionesController.deleteInscripcion);
 
+/**
+ * @swagger
+ * /inscripciones/{id}/aprobar:
+ *   post:
+ *     summary: Aprueba una inscripción (crea AulaAlumno y marca estado=Aceptado)
+ *     tags: [Inscripciones]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID de la inscripción
+ *     responses:
+ *       200:
+ *         description: Inscripción aprobada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/Inscripcion'
+ *                 message:
+ *                   type: string
+ *                 action_code:
+ *                   type: integer
+ */
+router.post('/inscripciones/:id/aprobar', inscripcionesController.aprobarInscripcion);
+
+/**
+ * @swagger
+ * /inscripciones/{id}/rechazar:
+ *   post:
+ *     summary: Rechaza una inscripción (actualiza estado=Rechazado)
+ *     tags: [Inscripciones]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID de la inscripción
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               observacion:
+ *                 type: string
+ *                 description: Motivo del rechazo
+ *     responses:
+ *       200:
+ *         description: Inscripción rechazada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/Inscripcion'
+ *                 message:
+ *                   type: string
+ *                 action_code:
+ *                   type: integer
+ */
+router.post('/inscripciones/:id/rechazar', inscripcionesController.rechazarInscripcion);
+
 module.exports = router;

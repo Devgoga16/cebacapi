@@ -48,3 +48,24 @@ exports.deleteInscripcion = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.aprobarInscripcion = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await inscripcionesService.aprobarInscripcion(id);
+    sendResponse(res, { data: result.inscripcion, message: result.message });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.rechazarInscripcion = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { observacion } = req.body || {};
+    const result = await inscripcionesService.rechazarInscripcion(id, observacion);
+    sendResponse(res, { data: result.inscripcion, message: result.message });
+  } catch (err) {
+    next(err);
+  }
+};
