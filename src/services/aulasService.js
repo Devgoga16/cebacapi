@@ -35,11 +35,19 @@ exports.getListasPorAula = async (idAula) => {
     AulaAlumno.find({ id_aula: idAula })
       .populate({
         path: 'id_alumno',
-        select: 'nombres apellido_paterno apellido_materno email id_user',
-        populate: { path: 'id_user', select: 'active validado' }
+        populate: [
+          { path: 'id_user', select: 'active validado' },
+          { path: 'id_ministerio', populate: { path: 'id_iglesia' } }
+        ]
       }),
     Inscripcion.find({ id_aula: idAula })
-      .populate({ path: 'id_alumno', select: 'nombres apellido_paterno apellido_materno email' })
+      .populate({
+        path: 'id_alumno',
+        populate: [
+          { path: 'id_user', select: 'active validado' },
+          { path: 'id_ministerio', populate: { path: 'id_iglesia' } }
+        ]
+      })
   ]);
 
   // Agrupar para tabs del front
