@@ -41,18 +41,13 @@ exports.getMallaCurricularPorPersona = async (id_persona, options = {}) => {
 
   if (!cursos || cursos.length === 0) return [];
 
-  const cursoIds = cursos.map(c => c._id);
-
   // 2) Traer todas las aulas de esos cursos para relacionar AulaAlumno
+  const cursoIds = cursos.map(c => c._id);
   const aulas = await Aula.find({ id_curso: { $in: cursoIds } })
     .select('_id id_curso');
 
-  const aulasByCurso = new Map();
-  for (const a of aulas) {
-    const key = String(a.id_curso);
-    if (!aulasByCurso.has(key)) aulasByCurso.set(key, []);
-    aulasByCurso.get(key).push(a);
-  }
+  // Opcional: log de depuración que existía antes
+  console.log('aulassssss', aulas);
 
   const allAulaIds = aulas.map(a => a._id);
 
@@ -77,6 +72,58 @@ exports.getMallaCurricularPorPersona = async (id_persona, options = {}) => {
       });
   }
 
+  // 3.1) Preparar set de cursos aprobados por el alumno
+  const aprobadasSet = new Set(
+    aulaAlumnos
+      .filter(r => String(r?.estado || '').toLowerCase() === 'aprobado')
+      .map(r => String(r?.id_aula?.id_curso?._id || r?.id_aula?.id_curso))
+      .filter(Boolean)
+  );
+
+  // 3.2) Índice de cursos no electivos por nivel (para validar prerequisitos de tipo Nivel)
+  const cursosNoElectivosPorNivel = new Map();
+  for (const c of cursos) {
+    const nivelId = c?.id_nivel ? String(c.id_nivel._id || c.id_nivel) : null;
+    if (!nivelId) continue;
+    if (!cursosNoElectivosPorNivel.has(nivelId)) cursosNoElectivosPorNivel.set(nivelId, []);
+    if (c.electivo !== true) {
+      cursosNoElectivosPorNivel.get(nivelId).push(String(c._id));
+    }
+  }
+
+  // 3.3) Evaluar aptitud del alumno para cada curso según prerequisitos
+  function evaluarAptitud(curso) {
+    const faltantesCursos = [];
+    const faltantesNivel = [];
+    let okCursos = true;
+    let okNivel = true;
+
+    const prereqs = Array.isArray(curso.prerequisitos) ? curso.prerequisitos : [];
+    for (const p of prereqs) {
+      const tipo = p?.tipo;
+      const ref = p?.ref_id;
+      if (tipo === 'Curso') {
+        const reqCursoId = String(ref?._id || ref || '');
+        if (!reqCursoId || !aprobadasSet.has(reqCursoId)) {
+          okCursos = false;
+          faltantesCursos.push(reqCursoId || null);
+        }
+      } else if (tipo === 'Nivel') {
+        const reqNivelId = String(ref?._id || ref || '');
+        if (reqNivelId) {
+          const requeridos = (cursosNoElectivosPorNivel.get(reqNivelId) || []).filter(id => id !== String(curso._id));
+          const faltan = requeridos.filter(id => !aprobadasSet.has(id));
+          if (faltan.length > 0) {
+            okNivel = false;
+            faltantesNivel.push({ nivel: reqNivelId, cursos: faltan });
+          }
+        }
+      }
+    }
+
+    return { apto: okCursos && okNivel, faltantes: { cursos: faltantesCursos, niveles: faltantesNivel } };
+  }
+
   // 4) Agrupar AulaAlumno por curso (vía id_aula.id_curso)
   const registrosByCurso = new Map();
   for (const reg of aulaAlumnos) {
@@ -91,11 +138,14 @@ exports.getMallaCurricularPorPersona = async (id_persona, options = {}) => {
   const porCurso = cursos.map(curso => {
     const key = String(curso._id);
     const registros = registrosByCurso.get(key) || [];
+    const { apto, faltantes } = evaluarAptitud(curso);
     return {
       curso,
       registros,
       total_registros: registros.length,
       tiene_registros: registros.length > 0,
+      apto,
+      requisitos: faltantes,
     };
   });
 
