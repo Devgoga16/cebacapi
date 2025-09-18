@@ -254,4 +254,45 @@ router.put('/aulas/:id', aulasController.updateAula);
  */
 router.delete('/aulas/:id', aulasController.deleteAula);
 
+/**
+ * @swagger
+ * /aulas/{id}/listas:
+ *   get:
+ *     summary: Obtiene las listas de AulaAlumnos e Inscripciones por aula
+ *     tags: [Aulas]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID del aula
+ *     responses:
+ *       200:
+ *         description: Listas obtenidas
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     aulaAlumnos:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     inscripciones:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                 message:
+ *                   type: string
+ *                 action_code:
+ *                   type: integer
+ */
+router.get('/aulas/:id/listas', aulasController.getListasPorAula);
+
 module.exports = router;

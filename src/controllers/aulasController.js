@@ -48,3 +48,13 @@ exports.deleteAula = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getListasPorAula = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const data = await aulasService.getListasPorAula(id);
+    sendResponse(res, { data, message: 'Listas obtenidas' });
+  } catch (err) {
+    next(err);
+  }
+};
