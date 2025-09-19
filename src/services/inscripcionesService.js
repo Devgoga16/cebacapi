@@ -80,21 +80,42 @@ exports.rechazarInscripcion = async (idInscripcion, observacion = '') => {
 exports.getAulasDisponiblesParaInscripcion = async () => {
   // Seleccionar ciclo con inscripciones abiertas; si hay varios, elegir el más reciente por fecha_inicio
   const cicloActual = await Ciclo.findOne({ inscripcionesabiertas: true }).sort({ fecha_inicio: -1 });
-  let aulas = [];
-  if (cicloActual) {
-    aulas = await Aula.find({ id_ciclo: cicloActual._id })
-      .populate({
-        path: 'id_curso',
-        populate: [
-          { path: 'id_nivel' },
-          // Populate dinámico de prerequisitos; si el ref es Curso, tendrá id_nivel; si es Nivel, no.
-          // Desactivamos strictPopulate para evitar error cuando el esquema no tiene ese path.
-          { path: 'prerequisitos.ref_id' },
-          { path: 'prerequisitos.ref_id.id_nivel', strictPopulate: false },
-        ]
-  })
-  .populate({ path: 'id_profesor', select: '-imagen' })
-  .populate('id_ciclo');
+  if (!cicloActual) return { cicloActual: null, niveles: [] };
+
+  const aulas = await Aula.find({ id_ciclo: cicloActual._id })
+    .populate({
+      path: 'id_curso',
+      populate: [
+        { path: 'id_nivel' },
+        // Populate dinámico de prerequisitos; si el ref es Curso, tendrá id_nivel; si es Nivel, no.
+        // Desactivamos strictPopulate para evitar error cuando el esquema no tiene ese path.
+        { path: 'prerequisitos.ref_id' },
+        { path: 'prerequisitos.ref_id.id_nivel', strictPopulate: false },
+      ]
+    })
+    .populate({ path: 'id_profesor', select: '-imagen' })
+    .populate('id_ciclo')
+    .lean();
+
+  // Agrupar por nivel -> curso -> aulas
+  const nivelesMap = new Map();
+  for (const aula of aulas) {
+    const curso = aula.id_curso;
+    const nivel = curso?.id_nivel;
+    const nivelId = nivel?._id?.toString() || 'sin-nivel';
+    if (!nivelesMap.has(nivelId)) {
+      nivelesMap.set(nivelId, { nivel: nivel || null, cursos: [], _cursosMap: new Map() });
+    }
+    const nivelGroup = nivelesMap.get(nivelId);
+
+    const cursoId = curso?._id?.toString() || 'sin-curso';
+    if (!nivelGroup._cursosMap.has(cursoId)) {
+      nivelGroup._cursosMap.set(cursoId, { curso: curso || null, aulas: [] });
+      nivelGroup.cursos.push(nivelGroup._cursosMap.get(cursoId));
+    }
+    nivelGroup._cursosMap.get(cursoId).aulas.push(aula);
   }
-  return { cicloActual, aulas };
+
+  const niveles = Array.from(nivelesMap.values()).map(g => ({ nivel: g.nivel, cursos: g.cursos }));
+  return { cicloActual, niveles };
 };

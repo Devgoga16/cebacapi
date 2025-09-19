@@ -69,11 +69,11 @@ router.get('/inscripciones', inscripcionesController.getAllInscripciones);
  * @swagger
  * /inscripciones/aulas-disponibles:
  *   get:
- *     summary: Lista el ciclo actual y las aulas de ese ciclo para inscripción
+ *     summary: Lista el ciclo con inscripciones abiertas y agrupa aulas por nivel y curso
  *     tags: [Inscripciones]
  *     responses:
  *       200:
- *         description: Ciclo actual y aulas
+ *         description: Ciclo con inscripciones abiertas y aulas agrupadas
  *         content:
  *           application/json:
  *             schema:
@@ -86,12 +86,29 @@ router.get('/inscripciones', inscripcionesController.getAllInscripciones);
  *                   properties:
  *                     cicloActual:
  *                       type: object
- *                       description: Ciclo con actual=true
- *                     aulas:
+ *                       description: Ciclo con inscripcionesabiertas=true (o null si no hay)
+ *                     niveles:
  *                       type: array
+ *                       description: Agrupación por nivel
  *                       items:
  *                         type: object
- *                         description: Aulas del ciclo actual
+ *                         properties:
+ *                           nivel:
+ *                             type: object
+ *                             description: Documento de nivel
+ *                           cursos:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 curso:
+ *                                   type: object
+ *                                   description: Documento de curso con prerequisitos poblados
+ *                                 aulas:
+ *                                   type: array
+ *                                   description: Aulas disponibles para ese curso
+ *                                   items:
+ *                                     type: object
  *                 message:
  *                   type: string
  *                 action_code:
