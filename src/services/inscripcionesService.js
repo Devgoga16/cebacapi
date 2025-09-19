@@ -116,6 +116,15 @@ exports.getAulasDisponiblesParaInscripcion = async () => {
     nivelGroup._cursosMap.get(cursoId).aulas.push(aula);
   }
 
-  const niveles = Array.from(nivelesMap.values()).map(g => ({ nivel: g.nivel, cursos: g.cursos }));
+  const niveles = Array.from(nivelesMap.values())
+    .map(g => ({ nivel: g.nivel, cursos: g.cursos }))
+    .sort((a, b) => {
+      if (!a.nivel && !b.nivel) return 0;
+      if (!a.nivel) return 1; // sin-nivel al final
+      if (!b.nivel) return -1;
+      const an = a.nivel.nombre_nivel || '';
+      const bn = b.nivel.nombre_nivel || '';
+      return an.localeCompare(bn, undefined, { numeric: true, sensitivity: 'base' });
+    });
   return { cicloActual, niveles };
 };
