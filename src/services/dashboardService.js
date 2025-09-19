@@ -10,6 +10,8 @@ exports.getAlumnoDashboard = async (id_persona) => {
   // 1. Ciclo actual
   const cicloActual = await Ciclo.findOne({ actual: true });
 
+  console.log('Ciclo actual:', cicloActual);
+
   // 2. Cursos que está cursando el alumno en el ciclo actual
   let cursosCursando = [];
   if (cicloActual) {
@@ -25,12 +27,14 @@ exports.getAlumnoDashboard = async (id_persona) => {
     cursosCursando = aulaAlumnos;
   }
 
+  console.log('Cursos cursando:', cursosCursando);
+
   // 3. Anuncios para el rol alumno y fecha_caducidad >= hoy
 
   let hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
 
-  let rol = await Rol.findOne({ nombre_rol: "Estudiante" });
+  let rol = await Rol.findOne({ nombre_rol: "estudiante" });
 
   let anuncios = await Anuncio.find({
     roles: { $in: [rol._id] },
@@ -71,7 +75,7 @@ exports.getDocenteDashboard = async (id_persona) => {
   // 3. Anuncios para el rol docente y fecha_caducidad >= hoy
   let hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
-  let rol = await Rol.findOne({ nombre_rol: "Docente" });
+  let rol = await Rol.findOne({ nombre_rol: "docente" });
   let anuncios = await Anuncio.find({
     roles: { $in: [rol._id] },
     fecha_caducidad: { $gte: hoy },
