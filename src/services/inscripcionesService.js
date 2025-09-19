@@ -1,5 +1,7 @@
 const Inscripcion = require('../models/inscripcion');
 const AulaAlumno = require('../models/aulaalumno');
+const Ciclo = require('../models/ciclo');
+const Aula = require('../models/aula');
 
 exports.getAllInscripciones = async () => {
   return await Inscripcion.find().populate('id_aula id_alumno');
@@ -71,4 +73,26 @@ exports.rechazarInscripcion = async (idInscripcion, observacion = '') => {
   ).populate('id_aula id_alumno');
 
   return { message: 'Inscripción rechazada', inscripcion: updated };
+};
+
+// Lista aulas disponibles para inscripción en el ciclo actual
+// Devuelve { cicloActual, aulas }
+exports.getAulasDisponiblesParaInscripcion = async () => {
+  const cicloActual = await Ciclo.findOne({ actual: true });
+  let aulas = [];
+  if (cicloActual) {
+    aulas = await Aula.find({ id_ciclo: cicloActual._id })
+      .populate({
+        path: 'id_curso',
+        populate: [
+          { path: 'id_nivel' },
+          // Populate dinámico de prerequisitos; si el ref es Curso, tendrá id_nivel; si es Nivel, no.
+          // Desactivamos strictPopulate para evitar error cuando el esquema no tiene ese path.
+          { path: 'prerequisitos.ref_id' },
+          { path: 'prerequisitos.ref_id.id_nivel', strictPopulate: false },
+        ]
+      })
+      .populate('id_ciclo');
+  }
+  return { cicloActual, aulas };
 };

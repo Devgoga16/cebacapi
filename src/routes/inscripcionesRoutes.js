@@ -67,6 +67,40 @@ router.get('/inscripciones', inscripcionesController.getAllInscripciones);
 
 /**
  * @swagger
+ * /inscripciones/aulas-disponibles:
+ *   get:
+ *     summary: Lista el ciclo actual y las aulas de ese ciclo para inscripción
+ *     tags: [Inscripciones]
+ *     responses:
+ *       200:
+ *         description: Ciclo actual y aulas
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     cicloActual:
+ *                       type: object
+ *                       description: Ciclo con actual=true
+ *                     aulas:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         description: Aulas del ciclo actual
+ *                 message:
+ *                   type: string
+ *                 action_code:
+ *                   type: integer
+ */
+router.get('/inscripciones/aulas-disponibles', inscripcionesController.getAulasDisponibles);
+
+/**
+ * @swagger
  * /inscripciones/{id}:
  *   get:
  *     summary: Obtiene una inscripción por id
@@ -316,5 +350,4 @@ router.post('/inscripciones/:id/aprobar', inscripcionesController.aprobarInscrip
  *                   type: integer
  */
 router.post('/inscripciones/:id/rechazar', inscripcionesController.rechazarInscripcion);
-
 module.exports = router;

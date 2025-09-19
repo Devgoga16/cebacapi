@@ -69,3 +69,12 @@ exports.rechazarInscripcion = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getAulasDisponibles = async (req, res, next) => {
+  try {
+    const data = await inscripcionesService.getAulasDisponiblesParaInscripcion();
+    sendResponse(res, { data });
+  } catch (err) {
+    next(err);
+  }
+};
