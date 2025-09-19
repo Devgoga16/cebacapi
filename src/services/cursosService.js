@@ -246,7 +246,19 @@ exports.getCursosAgrupadosPorNivelIdAsc = async () => {
       if (kb === SIN_NIVEL_KEY) return -1;
       return ka.localeCompare(kb);
     })
-    .map(([, group]) => group);
+    .map(([, group]) => {
+      // Ordenar cursos: primero obligatorios (electivo !== true), luego electivos (electivo === true)
+      const cursosOrdenados = (group.cursos || []).slice().sort((a, b) => {
+        const aElectivo = a?.electivo === true ? 1 : 0;
+        const bElectivo = b?.electivo === true ? 1 : 0;
+        if (aElectivo !== bElectivo) return aElectivo - bElectivo; // 0 antes que 1
+        // opcional: como segundo criterio, por nombre_curso
+        const an = a?.nombre_curso || '';
+        const bn = b?.nombre_curso || '';
+        return an.localeCompare(bn, undefined, { sensitivity: 'base', numeric: true });
+      });
+      return { ...group, cursos: cursosOrdenados };
+    });
 
   return { niveles };
 };
