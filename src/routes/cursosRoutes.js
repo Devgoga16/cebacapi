@@ -378,7 +378,7 @@ router.get('/cursos/malla/:id_persona', cursosController.getMallaCurricularPorPe
  *     tags: [Cursos]
  *     responses:
  *       200:
- *         description: Cursos agrupados por id_nivel (orden asc por ObjectId)
+ *         description: Cursos agrupados por id_nivel (orden asc por ObjectId). Incluye niveles sin cursos con arreglo vacío.
  *         content:
  *           application/json:
  *             schema:

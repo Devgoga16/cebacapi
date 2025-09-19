@@ -214,25 +214,37 @@ exports.getMallaCurricularPorPersona = async (id_persona, options = {}) => {
 
 // Devuelve cursos agrupados por id_nivel y ordenados por el valor de id_nivel (ObjectId) de menor a mayor
 exports.getCursosAgrupadosPorNivelIdAsc = async () => {
-  const cursos = await Curso.find()
-    .populate('id_nivel')
-    .populate('prerequisitos.ref_id')
-    .lean();
+  const [cursos, nivelesAll] = await Promise.all([
+    Curso.find().populate('id_nivel').populate('prerequisitos.ref_id').lean(),
+    require('../models/nivel').find().lean(),
+  ]);
 
-  const grupos = new Map(); // key: id_nivel string | 'sin_nivel' -> { nivel, cursos }
+  // Precrear grupos para todos los niveles existentes (aunque no tengan cursos)
+  const grupos = new Map(); // key: id_nivel string -> { nivel, cursos: [] }
+  for (const n of nivelesAll) {
+    const key = String(n._id);
+    grupos.set(key, { nivel: n, cursos: [] });
+  }
+
+  // También consideramos cursos sin nivel asignado
+  const SIN_NIVEL_KEY = 'sin_nivel';
+  grupos.set(SIN_NIVEL_KEY, { nivel: null, cursos: [] });
+
+  // Distribuir cursos en su grupo
   for (const c of cursos) {
     const nivelDoc = c.id_nivel || null;
-    const nivelKey = nivelDoc ? String(nivelDoc._id || nivelDoc) : 'sin_nivel';
+    const nivelKey = nivelDoc ? String(nivelDoc._id || nivelDoc) : SIN_NIVEL_KEY;
     if (!grupos.has(nivelKey)) grupos.set(nivelKey, { nivel: nivelDoc, cursos: [] });
     grupos.get(nivelKey).cursos.push(c);
   }
 
+  // Ordenar por id de nivel asc; 'sin_nivel' al final
   const niveles = Array.from(grupos.entries())
     .sort(([ka], [kb]) => {
-      if (ka === 'sin_nivel' && kb === 'sin_nivel') return 0;
-      if (ka === 'sin_nivel') return 1; // sin_nivel al final
-      if (kb === 'sin_nivel') return -1;
-      return ka.localeCompare(kb); // ordenar por ObjectId como string asc
+      if (ka === SIN_NIVEL_KEY && kb === SIN_NIVEL_KEY) return 0;
+      if (ka === SIN_NIVEL_KEY) return 1;
+      if (kb === SIN_NIVEL_KEY) return -1;
+      return ka.localeCompare(kb);
     })
     .map(([, group]) => group);
 
