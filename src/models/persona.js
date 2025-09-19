@@ -70,6 +70,16 @@ const PersonaSchema = new mongoose.Schema(
       type: String,
       required: false,
       trim: true,
+    },
+    imagen: {
+      data: {
+        type: String, // base64
+        required: false,
+      },
+      // Puedes agregar metadatos opcionales si lo necesitas
+      filename: { type: String, required: false, trim: true },
+      mimetype: { type: String, required: false, trim: true },
+      size: { type: Number, required: false }, // en bytes
     }
   },
   {

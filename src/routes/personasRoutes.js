@@ -64,6 +64,18 @@ const personasController = require('../controllers/personasController');
  *           description: ID del ministerio (ObjectId)
  *         otra_denominacion:
  *           type: string
+ *         imagen:
+ *           type: object
+ *           properties:
+ *             data:
+ *               type: string
+ *               description: Imagen en base64 (data URI o base64 plano)
+ *             filename:
+ *               type: string
+ *             mimetype:
+ *               type: string
+ *             size:
+ *               type: number
  *         createdAt:
  *           type: string
  *         updatedAt:
