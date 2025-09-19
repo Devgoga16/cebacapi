@@ -48,3 +48,13 @@ exports.deleteAulaAlumno = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getAulaAlumnosPorPersona = async (req, res, next) => {
+  try {
+    const { id_persona } = req.params;
+    const data = await aulaalumnosService.getAulaAlumnosPorPersona(id_persona);
+    sendResponse(res, { data, message: 'Registros de AulaAlumno por persona' });
+  } catch (err) {
+    next(err);
+  }
+};

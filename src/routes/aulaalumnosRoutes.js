@@ -238,4 +238,38 @@ router.put('/aulaalumnos/:id', aulaalumnosController.updateAulaAlumno);
  */
 router.delete('/aulaalumnos/:id', aulaalumnosController.deleteAulaAlumno);
 
+/**
+ * @swagger
+ * /aulaalumnos/persona/{id_persona}:
+ *   get:
+ *     summary: Obtiene todos los registros de AulaAlumno de una persona con datos poblados
+ *     tags: [AulaAlumnos]
+ *     parameters:
+ *       - in: path
+ *         name: id_persona
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID de la persona (alumno)
+ *     responses:
+ *       200:
+ *         description: Registros encontrados
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/AulaAlumno'
+ *                 message:
+ *                   type: string
+ *                 action_code:
+ *                   type: integer
+ */
+router.get('/aulaalumnos/persona/:id_persona', aulaalumnosController.getAulaAlumnosPorPersona);
+
 module.exports = router;
