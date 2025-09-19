@@ -10,8 +10,6 @@ exports.getAlumnoDashboard = async (id_persona) => {
   // 1. Ciclo actual
   const cicloActual = await Ciclo.findOne({ actual: true });
 
-  console.log('Ciclo actual:', cicloActual);
-
   // 2. Cursos que está cursando el alumno en el ciclo actual
   let cursosCursando = [];
   if (cicloActual) {
@@ -27,18 +25,24 @@ exports.getAlumnoDashboard = async (id_persona) => {
     cursosCursando = aulaAlumnos;
   }
 
-  console.log('Cursos cursando:', cursosCursando);
 
   // 3. Anuncios para el rol alumno y fecha_caducidad >= hoy
 
-  let hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
+  // Usar inicio del día en UTC para evitar problemas de zona horaria cuando
+  // fecha_caducidad se guarda como fecha (00:00:00Z). Esto garantiza que
+  // un anuncio con caducidad "hoy" sea visible hasta las 23:59:59 hora local.
+  const now = new Date();
+  // Construye medianoche UTC de la FECHA LOCAL actual
+  // (usa getFullYear()/getMonth()/getDate() en lugar de getUTC* para no saltar de día)
+  const hoyUTC = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+
+  console.log('Fecha hoy UTC:', hoyUTC);
 
   let rol = await Rol.findOne({ nombre_rol: "estudiante" });
 
   let anuncios = await Anuncio.find({
     roles: { $in: [rol._id] },
-    fecha_caducidad: { $gte: hoy },
+    fecha_caducidad: { $gte: hoyUTC },
   }).populate('id_categoria_anuncio roles id_publicador');
 
   return {
@@ -73,12 +77,13 @@ exports.getDocenteDashboard = async (id_persona) => {
   }
 
   // 3. Anuncios para el rol docente y fecha_caducidad >= hoy
-  let hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
+  const now = new Date();
+  const hoyUTC = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+
   let rol = await Rol.findOne({ nombre_rol: "docente" });
   let anuncios = await Anuncio.find({
     roles: { $in: [rol._id] },
-    fecha_caducidad: { $gte: hoy },
+    fecha_caducidad: { $gte: hoyUTC },
   }).populate('id_categoria_anuncio roles id_publicador');
 
   return {
