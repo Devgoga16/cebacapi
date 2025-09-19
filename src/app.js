@@ -22,7 +22,9 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+// Aumenta el tamaño máximo del body para permitir imágenes en base64 u otros payloads grandes
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 const port = process.env.PORT || 3000;
 
 const swaggerOptions = {
