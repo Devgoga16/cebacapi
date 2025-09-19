@@ -30,6 +30,51 @@ exports.deleteCurso = async (id) => {
   return !!result;
 };
 
+// Devuelve cursos agrupados por nivel (orden de niveles de menor a mayor por nombre_nivel)
+// Incluye las aulas del ciclo indicado para cada curso
+exports.getCursosAgrupadosPorNivel = async (id_ciclo) => {
+  const cursos = await Curso.find()
+    .populate('id_nivel')
+    .populate('prerequisitos.ref_id')
+    .lean();
+
+  // Si se envía id_ciclo, traemos aulas de ese ciclo e indexamos por id_curso
+  let aulasByCurso = new Map();
+  if (id_ciclo) {
+    const cursoIds = cursos.map(c => c._id);
+    const aulas = await Aula.find({ id_ciclo, id_curso: { $in: cursoIds } })
+      .select('_id id_curso dia hora_inicio hora_fin aforo es_presencial fecha_inicio fecha_fin')
+      .lean();
+    aulasByCurso = aulas.reduce((map, a) => {
+      const key = String(a.id_curso);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(a);
+      return map;
+    }, new Map());
+  }
+
+  const map = new Map();
+  for (const c of cursos) {
+    const nivel = c.id_nivel || null;
+    const nivelKey = (nivel && (nivel._id?.toString?.() || nivel.toString?.())) || 'sin_nivel';
+    if (!map.has(nivelKey)) map.set(nivelKey, { nivel, cursos: [] });
+    // Adjuntar aulas del ciclo si corresponde
+    const aulas = aulasByCurso.get(String(c._id)) || [];
+    map.get(nivelKey).cursos.push({ ...c, aulas });
+  }
+
+  const niveles = Array.from(map.values()).sort((a, b) => {
+    if (!a.nivel && !b.nivel) return 0;
+    if (!a.nivel) return 1;
+    if (!b.nivel) return -1;
+    const an = a.nivel.nombre_nivel || '';
+    const bn = b.nivel.nombre_nivel || '';
+    return an.localeCompare(bn, undefined, { numeric: true, sensitivity: 'base' });
+  });
+
+  return { niveles };
+};
+
 // Devuelve la malla curricular para un alumno: lista de cursos y, por cada curso,
 // los registros en AulaAlumno que correspondan al id_persona (id_alumno) y a aulas de ese curso
 exports.getMallaCurricularPorPersona = async (id_persona, options = {}) => {
@@ -165,4 +210,31 @@ exports.getMallaCurricularPorPersona = async (id_persona, options = {}) => {
   }
 
   return porCurso;
+};
+
+// Devuelve cursos agrupados por id_nivel y ordenados por el valor de id_nivel (ObjectId) de menor a mayor
+exports.getCursosAgrupadosPorNivelIdAsc = async () => {
+  const cursos = await Curso.find()
+    .populate('id_nivel')
+    .populate('prerequisitos.ref_id')
+    .lean();
+
+  const grupos = new Map(); // key: id_nivel string | 'sin_nivel' -> { nivel, cursos }
+  for (const c of cursos) {
+    const nivelDoc = c.id_nivel || null;
+    const nivelKey = nivelDoc ? String(nivelDoc._id || nivelDoc) : 'sin_nivel';
+    if (!grupos.has(nivelKey)) grupos.set(nivelKey, { nivel: nivelDoc, cursos: [] });
+    grupos.get(nivelKey).cursos.push(c);
+  }
+
+  const niveles = Array.from(grupos.entries())
+    .sort(([ka], [kb]) => {
+      if (ka === 'sin_nivel' && kb === 'sin_nivel') return 0;
+      if (ka === 'sin_nivel') return 1; // sin_nivel al final
+      if (kb === 'sin_nivel') return -1;
+      return ka.localeCompare(kb); // ordenar por ObjectId como string asc
+    })
+    .map(([, group]) => group);
+
+  return { niveles };
 };

@@ -72,7 +72,8 @@ exports.rechazarInscripcion = async (req, res, next) => {
 
 exports.getAulasDisponibles = async (req, res, next) => {
   try {
-    const data = await inscripcionesService.getAulasDisponiblesParaInscripcion();
+    const { id_persona } = req.query || {};
+    const data = await inscripcionesService.getAulasDisponiblesParaInscripcion(id_persona);
     sendResponse(res, { data });
   } catch (err) {
     next(err);

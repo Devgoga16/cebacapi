@@ -250,6 +250,50 @@ router.delete('/cursos/:id', cursosController.deleteCurso);
 
 /**
  * @swagger
+ * /cursos/agrupados/niveles/{id_ciclo}:
+ *   get:
+ *     summary: Lista cursos agrupados por nivel (niveles ordenados de menor a mayor)
+ *     tags: [Cursos]
+ *     parameters:
+ *       - in: path
+ *         name: id_ciclo
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID del ciclo para el cual listar aulas de cada curso
+ *     responses:
+ *       200:
+ *         description: Cursos agrupados
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     niveles:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           nivel:
+ *                             type: object
+ *                           cursos:
+ *                             type: array
+ *                             items:
+ *                               $ref: '#/components/schemas/Curso'
+ *                 message:
+ *                   type: string
+ *                 action_code:
+ *                   type: integer
+ */
+router.get('/cursos/agrupados/niveles/:id_ciclo', cursosController.getCursosAgrupadosPorNivel);
+
+/**
+ * @swagger
  * /cursos/malla/{id_persona}:
  *   get:
  *     summary: Obtiene la malla curricular de una persona
@@ -325,5 +369,43 @@ router.delete('/cursos/:id', cursosController.deleteCurso);
  *                   type: integer
  */
 router.get('/cursos/malla/:id_persona', cursosController.getMallaCurricularPorPersona);
+
+/**
+ * @swagger
+ * /cursos/agrupados/niveles-id:
+ *   get:
+ *     summary: Lista cursos agrupados por id_nivel y ordenados por id_nivel ascendente
+ *     tags: [Cursos]
+ *     responses:
+ *       200:
+ *         description: Cursos agrupados por id_nivel (orden asc por ObjectId)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     niveles:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           nivel:
+ *                             type: object
+ *                             description: Documento de nivel (si existe)
+ *                           cursos:
+ *                             type: array
+ *                             items:
+ *                               $ref: '#/components/schemas/Curso'
+ *                 message:
+ *                   type: string
+ *                 action_code:
+ *                   type: integer
+ */
+router.get('/cursos/agrupados/niveles-id', cursosController.getCursosAgrupadosPorNivelIdAsc);
 
 module.exports = router;

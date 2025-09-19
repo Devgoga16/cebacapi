@@ -59,3 +59,22 @@ exports.getMallaCurricularPorPersona = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getCursosAgrupadosPorNivel = async (req, res, next) => {
+  try {
+    const { id_ciclo } = req.params;
+    const data = await cursosService.getCursosAgrupadosPorNivel(id_ciclo);
+    sendResponse(res, { data, message: 'Cursos agrupados por nivel' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getCursosAgrupadosPorNivelIdAsc = async (req, res, next) => {
+  try {
+    const data = await cursosService.getCursosAgrupadosPorNivelIdAsc();
+    sendResponse(res, { data, message: 'Cursos agrupados por id_nivel asc' });
+  } catch (err) {
+    next(err);
+  }
+};

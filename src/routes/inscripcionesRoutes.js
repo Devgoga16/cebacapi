@@ -71,6 +71,13 @@ router.get('/inscripciones', inscripcionesController.getAllInscripciones);
  *   get:
  *     summary: Lista el ciclo con inscripciones abiertas y agrupa aulas por nivel y curso
  *     tags: [Inscripciones]
+ *     parameters:
+ *       - in: query
+ *         name: id_persona
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Si se envía, excluye aulas de cursos ya llevados por esa persona (aprobado/en curso) y cursos con Inscripción vigente (Pendiente o Aceptado) en el ciclo abierto
  *     responses:
  *       200:
  *         description: Ciclo con inscripciones abiertas y aulas agrupadas

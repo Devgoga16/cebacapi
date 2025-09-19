@@ -75,12 +75,27 @@ exports.rechazarInscripcion = async (idInscripcion, observacion = '') => {
   return { message: 'Inscripción rechazada', inscripcion: updated };
 };
 
-// Lista aulas disponibles para inscripción en el ciclo actual
-// Devuelve { cicloActual, aulas }
-exports.getAulasDisponiblesParaInscripcion = async () => {
+// Lista aulas disponibles para inscripción en el ciclo actual para una persona
+// Excluye:
+//  - aulas de cursos que la persona ya ha llevado (AulaAlumno estado 'aprobado' o 'en curso')
+//  - aulas de cursos para los que la persona ya tiene una Inscripción en el ciclo abierto (estado 'Pendiente' o 'Aceptado')
+// Devuelve { cicloActual, niveles }
+exports.getAulasDisponiblesParaInscripcion = async (id_persona) => {
   // Seleccionar ciclo con inscripciones abiertas; si hay varios, elegir el más reciente por fecha_inicio
   const cicloActual = await Ciclo.findOne({ inscripcionesabiertas: true }).sort({ fecha_inicio: -1 });
   if (!cicloActual) return { cicloActual: null, niveles: [] };
+
+  // 1) Obtener cursos que la persona ya ha llevado (estado 'aprobado' o 'en curso')
+  let cursosLlevados = new Set();
+  if (id_persona) {
+    const regs = await AulaAlumno.find({ id_alumno: id_persona, estado: { $in: ['aprobado', 'en curso'] } })
+      .select('id_aula')
+      .populate({ path: 'id_aula', select: 'id_curso' })
+      .lean();
+    cursosLlevados = new Set(
+      regs.map(r => r?.id_aula?.id_curso).filter(Boolean).map(id => String(id))
+    );
+  }
 
   const aulas = await Aula.find({ id_ciclo: cicloActual._id })
     .populate({
@@ -97,10 +112,34 @@ exports.getAulasDisponiblesParaInscripcion = async () => {
     .populate('id_ciclo')
     .lean();
 
+  // 2) Obtener cursos para los que ya existe una Inscripción del alumno en este ciclo (Pendiente o Aceptado)
+  let cursosConInscripcion = new Set();
+  if (id_persona) {
+    const aulaIdsDelCiclo = aulas.map(a => String(a._id));
+    if (aulaIdsDelCiclo.length) {
+      const inscs = await Inscripcion.find({
+        id_alumno: id_persona,
+        estado: { $in: ['Pendiente', 'Aceptado'] },
+        id_aula: { $in: aulaIdsDelCiclo }
+      }).select('id_aula').lean();
+
+      // Mapear id_aula -> id_curso usando las aulas ya cargadas
+      const mapaAulaCurso = new Map(aulas.map(a => [String(a._id), String(a?.id_curso?._id || '')]));
+      cursosConInscripcion = new Set(
+        inscs
+          .map(i => mapaAulaCurso.get(String(i.id_aula)))
+          .filter(Boolean)
+      );
+    }
+  }
+
   // Agrupar por nivel -> curso -> aulas
   const nivelesMap = new Map();
   for (const aula of aulas) {
     const curso = aula.id_curso;
+    // saltar cursos ya llevados por la persona
+    const cursoIdStr = String(curso?._id || '');
+    if (cursoIdStr && (cursosLlevados.has(cursoIdStr) || cursosConInscripcion.has(cursoIdStr))) continue;
     const nivel = curso?.id_nivel;
     const nivelId = nivel?._id?.toString() || 'sin-nivel';
     if (!nivelesMap.has(nivelId)) {
