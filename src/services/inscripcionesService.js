@@ -78,7 +78,8 @@ exports.rechazarInscripcion = async (idInscripcion, observacion = '') => {
 // Lista aulas disponibles para inscripción en el ciclo actual
 // Devuelve { cicloActual, aulas }
 exports.getAulasDisponiblesParaInscripcion = async () => {
-  const cicloActual = await Ciclo.findOne({ actual: true });
+  // Seleccionar ciclo con inscripciones abiertas; si hay varios, elegir el más reciente por fecha_inicio
+  const cicloActual = await Ciclo.findOne({ inscripcionesabiertas: true }).sort({ fecha_inicio: -1 });
   let aulas = [];
   if (cicloActual) {
     aulas = await Aula.find({ id_ciclo: cicloActual._id })
@@ -91,8 +92,9 @@ exports.getAulasDisponiblesParaInscripcion = async () => {
           { path: 'prerequisitos.ref_id' },
           { path: 'prerequisitos.ref_id.id_nivel', strictPopulate: false },
         ]
-      })
-      .populate('id_ciclo');
+  })
+  .populate({ path: 'id_profesor', select: '-imagen' })
+  .populate('id_ciclo');
   }
   return { cicloActual, aulas };
 };

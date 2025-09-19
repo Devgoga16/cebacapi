@@ -19,6 +19,10 @@ const CicloSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    inscripcionesabiertas: {
+      type: Boolean,
+      default: false,
+    },
     año: {
       type: Number,
       required: true,

@@ -28,6 +28,9 @@ const ciclosController = require('../controllers/ciclosController');
  *           format: date
  *         actual:
  *           type: boolean
+ *         inscripcionesabiertas:
+ *           type: boolean
+ *           description: Indica si las inscripciones están abiertas para este ciclo
  *         año:
  *           type: number
  *         createdAt:
