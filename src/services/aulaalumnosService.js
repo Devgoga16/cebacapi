@@ -23,8 +23,9 @@ exports.deleteAulaAlumno = async (id) => {
 };
 
 // Lista todos los registros de AulaAlumno de una persona, con la mayor cantidad de datos poblados
-exports.getAulaAlumnosPorPersona = async (id_persona) => {
-  return await AulaAlumno.find({ id_alumno: id_persona })
+exports.getAulaAlumnosPorPersona = async (id_persona, options = {}) => {
+  const { groupBy } = options || {};
+  const registros = await AulaAlumno.find({ id_alumno: id_persona })
     .populate({
       path: 'id_aula',
       populate: [
@@ -40,6 +41,31 @@ exports.getAulaAlumnosPorPersona = async (id_persona) => {
         { path: 'id_ministerio', populate: { path: 'id_iglesia' } }
       ]
     });
+
+  if (groupBy === 'ciclo') {
+    const grupos = new Map();
+    for (const reg of registros) {
+      const cicloDoc = reg?.id_aula?.id_ciclo || null;
+      const key = cicloDoc ? String(cicloDoc._id || cicloDoc) : 'sin_ciclo';
+      if (!grupos.has(key)) grupos.set(key, { ciclo: cicloDoc, registros: [] });
+      grupos.get(key).registros.push(reg);
+    }
+    // Ordenar: primero ciclos con inscripcionesabiertas=true, luego actual=true, luego por fecha_inicio desc; 'sin_ciclo' al final
+    return Array.from(grupos.values()).sort((a, b) => {
+      if (!a.ciclo && !b.ciclo) return 0;
+      if (!a.ciclo) return 1;
+      if (!b.ciclo) return -1;
+      const rank = (c) => (c.inscripcionesabiertas ? 2 : (c.actual ? 1 : 0));
+      const ra = rank(a.ciclo);
+      const rb = rank(b.ciclo);
+      if (ra !== rb) return rb - ra; // mayor prioridad primero
+      const ad = a.ciclo.fecha_inicio ? new Date(a.ciclo.fecha_inicio).getTime() : 0;
+      const bd = b.ciclo.fecha_inicio ? new Date(b.ciclo.fecha_inicio).getTime() : 0;
+      return bd - ad; // más reciente primero
+    });
+  }
+
+  return registros;
 };
 
 // Inserción masiva de AulaAlumno: recibe id_alumno y lista de id_aulas y crea registros con estado 'en curso'

@@ -251,6 +251,13 @@ router.delete('/aulaalumnos/:id', aulaalumnosController.deleteAulaAlumno);
  *           type: string
  *         required: true
  *         description: ID de la persona (alumno)
+ *       - in: query
+ *         name: groupBy
+ *         schema:
+ *           type: string
+ *           enum: [ciclo]
+ *         required: false
+ *         description: Si se envía "ciclo", agrupa los registros por ciclo
  *     responses:
  *       200:
  *         description: Registros encontrados
