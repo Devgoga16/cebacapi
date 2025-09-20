@@ -95,7 +95,7 @@ exports.bulkCreateAulaAlumnos = async (id_alumno, id_aulas) => {
   const existentesSet = new Set(existentes.map(e => String(e.id_aula)));
 
   const toInsertIds = requestedIds.filter(id => !existentesSet.has(id));
-  const docs = toInsertIds.map(id_aula => ({ id_aula, id_alumno, estado: 'en curso' }));
+  const docs = toInsertIds.map(id_aula => ({ id_aula, id_alumno, estado: 'inscrito' }));
 
   let inserted = [];
   if (docs.length > 0) {

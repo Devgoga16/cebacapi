@@ -13,7 +13,7 @@ const AulaAlumnoSchema = new mongoose.Schema({
   },
   estado: {
     type: String,
-    enum: ['aprobado', 'reprobado', 'en curso', 'retirado'],
+    enum: ['aprobado', 'reprobado', 'en curso', 'retirado', 'inscrito'],
     default: 'en curso'
   }
 }, {
