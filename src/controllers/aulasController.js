@@ -68,3 +68,13 @@ exports.getAulasByCursoAndCiclo = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getAulasDocenteAgrupadasPorCiclo = async (req, res, next) => {
+  try {
+    const { id_persona } = req.params;
+    const grupos = await aulasService.getAulasPorProfesorAgrupadasPorCiclo(id_persona);
+    sendResponse(res, { data: grupos });
+  } catch (err) {
+    next(err);
+  }
+};

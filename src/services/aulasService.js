@@ -88,3 +88,48 @@ exports.getListasPorAula = async (idAula) => {
     }
   };
 };
+
+// Lista todas las aulas donde una persona es profesor, agrupadas por ciclo
+// Devuelve un arreglo de grupos: [{ ciclo, aulas: [] }],
+// ordenado por prioridad: inscripcionesabiertas (true) primero, luego actual (true),
+// y finalmente por fecha_inicio del ciclo descendente. Los registros sin ciclo van al final.
+exports.getAulasPorProfesorAgrupadasPorCiclo = async (id_persona) => {
+  if (!id_persona) {
+    const err = new Error('id_persona es requerido');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const aulas = await Aula.find({ id_profesor: id_persona })
+    .populate({
+      path: 'id_curso',
+      populate: { path: 'id_nivel' }
+    })
+    .populate('id_ciclo')
+    .lean();
+
+  // Agrupar por ciclo
+  const grupos = new Map();
+  for (const aula of aulas) {
+    const cicloDoc = aula?.id_ciclo || null;
+    const key = cicloDoc ? String(cicloDoc._id || cicloDoc) : 'sin_ciclo';
+    if (!grupos.has(key)) grupos.set(key, { ciclo: cicloDoc, aulas: [] });
+    grupos.get(key).aulas.push(aula);
+  }
+
+  // Ordenar grupos por prioridad
+  const ordenados = Array.from(grupos.values()).sort((a, b) => {
+    if (!a.ciclo && !b.ciclo) return 0;
+    if (!a.ciclo) return 1;
+    if (!b.ciclo) return -1;
+    const rank = (c) => (c.inscripcionesabiertas ? 2 : (c.actual ? 1 : 0));
+    const ra = rank(a.ciclo);
+    const rb = rank(b.ciclo);
+    if (ra !== rb) return rb - ra; // mayor prioridad primero
+    const ad = a.ciclo.fecha_inicio ? new Date(a.ciclo.fecha_inicio).getTime() : 0;
+    const bd = b.ciclo.fecha_inicio ? new Date(b.ciclo.fecha_inicio).getTime() : 0;
+    return bd - ad; // más reciente primero
+  });
+
+  return ordenados;
+};

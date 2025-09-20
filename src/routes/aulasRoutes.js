@@ -335,4 +335,46 @@ router.get('/aulas/:id/listas', aulasController.getListasPorAula);
  */
 router.get('/aulas/por-curso/:id_curso/ciclo/:id_ciclo', aulasController.getAulasByCursoAndCiclo);
 
+/**
+ * @swagger
+ * /aulas/profesor/{id_persona}/agrupadas/ciclos:
+ *   get:
+ *     summary: Lista todas las aulas donde la persona es profesor, agrupadas por ciclo
+ *     tags: [Aulas]
+ *     parameters:
+ *       - in: path
+ *         name: id_persona
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID de la persona (profesor)
+ *     responses:
+ *       200:
+ *         description: Grupos de aulas por ciclo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       ciclo:
+ *                         type: object
+ *                         description: Documento del ciclo (puede ser null si no está asignado)
+ *                       aulas:
+ *                         type: array
+ *                         items:
+ *                           $ref: '#/components/schemas/Aula'
+ *                 message:
+ *                   type: string
+ *                 action_code:
+ *                   type: integer
+ */
+router.get('/aulas/profesor/:id_persona/agrupadas/ciclos', aulasController.getAulasDocenteAgrupadasPorCiclo);
+
 module.exports = router;
