@@ -85,16 +85,26 @@ exports.getAulasDisponiblesParaInscripcion = async (id_persona) => {
   const cicloActual = await Ciclo.findOne({ inscripcionesabiertas: true }).sort({ fecha_inicio: -1 });
   if (!cicloActual) return { cicloActual: null, niveles: [] };
 
-  // 1) Obtener cursos que la persona ya ha llevado (estado 'aprobado' o 'en curso')
+  // 1) Obtener cursos que la persona ya ha llevado (estado 'aprobado' o 'en curso') y los que tiene APROBADOS (para validar prerequisitos)
   let cursosLlevados = new Set();
+  let cursosAprobados = new Set();
   if (id_persona) {
     const regs = await AulaAlumno.find({ id_alumno: id_persona, estado: { $in: ['aprobado', 'en curso'] } })
-      .select('id_aula')
+      .select('id_aula estado')
       .populate({ path: 'id_aula', select: 'id_curso' })
       .lean();
-    cursosLlevados = new Set(
-      regs.map(r => r?.id_aula?.id_curso).filter(Boolean).map(id => String(id))
-    );
+    const llevados = [];
+    const aprobados = [];
+    for (const r of regs) {
+      const cursoId = r?.id_aula?.id_curso;
+      if (!cursoId) continue;
+      llevados.push(String(cursoId));
+      if (String(r?.estado || '').toLowerCase() === 'aprobado') {
+        aprobados.push(String(cursoId));
+      }
+    }
+    cursosLlevados = new Set(llevados);
+    cursosAprobados = new Set(aprobados);
   }
 
   const aulas = await Aula.find({ id_ciclo: cicloActual._id })
@@ -133,6 +143,46 @@ exports.getAulasDisponiblesParaInscripcion = async (id_persona) => {
     }
   }
 
+  // 3) Si hay persona, preparar validación de prerequisitos por curso
+  //    - Para prerequisitos de tipo 'Curso': debe estar en cursosAprobados
+  //    - Para prerequisitos de tipo 'Nivel': debe tener aprobados todos los cursos NO electivos de ese nivel (excepto el propio curso)
+  let cursosNoElectivosPorNivel = new Map();
+  if (id_persona) {
+    const todosCursos = await require('../models/curso')
+      .find()
+      .select('_id id_nivel electivo')
+      .lean();
+    for (const c of todosCursos) {
+      const nivelId = c?.id_nivel ? String(c.id_nivel) : null;
+      if (!nivelId) continue;
+      if (!cursosNoElectivosPorNivel.has(nivelId)) cursosNoElectivosPorNivel.set(nivelId, []);
+      if (c.electivo !== true) {
+        cursosNoElectivosPorNivel.get(nivelId).push(String(c._id));
+      }
+    }
+  }
+
+  function esAptoParaCurso(cursoDoc) {
+    if (!id_persona) return true; // si no hay persona, no aplicamos restricciones
+    if (!cursoDoc) return false;
+    const prereqs = Array.isArray(cursoDoc.prerequisitos) ? cursoDoc.prerequisitos : [];
+    for (const p of prereqs) {
+      const tipo = p?.tipo;
+      const ref = p?.ref_id;
+      if (tipo === 'Curso') {
+        const reqCursoId = String(ref?._id || ref || '');
+        if (!reqCursoId || !cursosAprobados.has(reqCursoId)) return false;
+      } else if (tipo === 'Nivel') {
+        const reqNivelId = String(ref?._id || ref || '');
+        if (!reqNivelId) continue;
+        const requeridos = (cursosNoElectivosPorNivel.get(reqNivelId) || []).filter(id => id !== String(cursoDoc._id));
+        const todosAprobados = requeridos.every(id => cursosAprobados.has(id));
+        if (!todosAprobados) return false;
+      }
+    }
+    return true;
+  }
+
   // Agrupar por nivel -> curso -> aulas
   const nivelesMap = new Map();
   for (const aula of aulas) {
@@ -140,6 +190,8 @@ exports.getAulasDisponiblesParaInscripcion = async (id_persona) => {
     // saltar cursos ya llevados por la persona
     const cursoIdStr = String(curso?._id || '');
     if (cursoIdStr && (cursosLlevados.has(cursoIdStr) || cursosConInscripcion.has(cursoIdStr))) continue;
+    // validar restricciones/prerequisitos
+    if (!esAptoParaCurso(curso)) continue;
     const nivel = curso?.id_nivel;
     const nivelId = nivel?._id?.toString() || 'sin-nivel';
     if (!nivelesMap.has(nivelId)) {
