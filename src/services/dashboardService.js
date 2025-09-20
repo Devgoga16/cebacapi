@@ -13,18 +13,14 @@ exports.getAlumnoDashboard = async (id_persona) => {
   // 2. Cursos que está cursando el alumno en el ciclo actual
   let cursosCursando = [];
   if (cicloActual) {
-    // Buscar registros de AulaAlumno para el alumno
-    const aulaAlumnos = await AulaAlumno.find({
-      id_alumno: id_persona,
-    }).populate({
-      path: "id_aula",
-      match: { id_ciclo: cicloActual._id },
-      populate: { path: "id_curso" },
-    });
-    // Filtrar los que sí tienen aula del ciclo actual
+    // Obtener aulas del ciclo actual y filtrar por esos IDs para evitar traer otros ciclos
+    const aulasIds = (await Aula.find({ id_ciclo: cicloActual._id }).select('_id').lean()).map(a => a._id);
+    const aulaAlumnos = aulasIds.length
+      ? await AulaAlumno.find({ id_alumno: id_persona, id_aula: { $in: aulasIds } })
+          .populate({ path: 'id_aula', populate: { path: 'id_curso' } })
+      : [];
     cursosCursando = aulaAlumnos;
   }
-
 
   // 3. Anuncios para el rol alumno y fecha_caducidad >= hoy
 
