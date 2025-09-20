@@ -295,4 +295,44 @@ router.delete('/aulas/:id', aulasController.deleteAula);
  */
 router.get('/aulas/:id/listas', aulasController.getListasPorAula);
 
+/**
+ * @swagger
+ * /aulas/por-curso/{id_curso}/ciclo/{id_ciclo}:
+ *   get:
+ *     summary: Lista aulas por curso y ciclo
+ *     tags: [Aulas]
+ *     parameters:
+ *       - in: path
+ *         name: id_curso
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID del curso
+ *       - in: path
+ *         name: id_ciclo
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID del ciclo
+ *     responses:
+ *       200:
+ *         description: Lista de aulas del curso en el ciclo indicado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Aula'
+ *                 message:
+ *                   type: string
+ *                 action_code:
+ *                   type: integer
+ */
+router.get('/aulas/por-curso/:id_curso/ciclo/:id_ciclo', aulasController.getAulasByCursoAndCiclo);
+
 module.exports = router;

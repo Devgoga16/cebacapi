@@ -29,6 +29,21 @@ exports.deleteAula = async (id) => {
   return !!result;
 };
 
+// Lista aulas filtrando por id_curso e id_ciclo
+exports.getAulasByCursoAndCiclo = async (id_curso, id_ciclo) => {
+  const filter = {};
+  if (id_curso) filter.id_curso = id_curso;
+  if (id_ciclo) filter.id_ciclo = id_ciclo;
+
+  return await Aula.find(filter)
+    .populate('id_profesor id_curso id_ciclo')
+    .populate({
+      path: 'id_curso',
+      populate: { path: 'id_nivel' }
+    })
+    .lean();
+};
+
 // Devuelve dos listas para un aula: alumnos asignados (AulaAlumnos) e inscripciones
 exports.getListasPorAula = async (idAula) => {
   const [aulaAlumnos, inscripciones] = await Promise.all([

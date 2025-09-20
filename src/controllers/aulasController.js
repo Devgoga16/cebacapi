@@ -58,3 +58,13 @@ exports.getListasPorAula = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getAulasByCursoAndCiclo = async (req, res, next) => {
+  try {
+    const { id_curso, id_ciclo } = req.params;
+    const aulas = await aulasService.getAulasByCursoAndCiclo(id_curso, id_ciclo);
+    sendResponse(res, { data: aulas });
+  } catch (err) {
+    next(err);
+  }
+};
