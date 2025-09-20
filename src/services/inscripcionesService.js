@@ -89,7 +89,7 @@ exports.getAulasDisponiblesParaInscripcion = async (id_persona) => {
   let cursosLlevados = new Set();
   let cursosAprobados = new Set();
   if (id_persona) {
-    const regs = await AulaAlumno.find({ id_alumno: id_persona, estado: { $in: ['aprobado', 'en curso'] } })
+    const regs = await AulaAlumno.find({ id_alumno: id_persona, estado: { $in: ['aprobado', 'en curso', 'inscrito'] } })
       .select('id_aula estado')
       .populate({ path: 'id_aula', select: 'id_curso' })
       .lean();
