@@ -17,7 +17,7 @@ exports.getAlumnoDashboard = async (id_persona) => {
     const aulasIds = (await Aula.find({ id_ciclo: cicloActual._id }).select('_id').lean()).map(a => a._id);
     const aulaAlumnos = aulasIds.length
       ? await AulaAlumno.find({ id_alumno: id_persona, id_aula: { $in: aulasIds } })
-          .populate({ path: 'id_aula', populate: { path: 'id_curso' } })
+          .populate({ path: 'id_aula', populate: { path: 'id_curso id_profesor' } })
       : [];
     cursosCursando = aulaAlumnos;
   }
