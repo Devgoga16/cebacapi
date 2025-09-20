@@ -41,3 +41,46 @@ exports.getAulaAlumnosPorPersona = async (id_persona) => {
       ]
     });
 };
+
+// Inserción masiva de AulaAlumno: recibe id_alumno y lista de id_aulas y crea registros con estado 'en curso'
+// Omite pares que ya existan (id_alumno + id_aula) y devuelve un resumen
+exports.bulkCreateAulaAlumnos = async (id_alumno, id_aulas) => {
+  if (!id_alumno) {
+    const err = new Error('id_alumno es requerido');
+    err.statusCode = 400;
+    throw err;
+  }
+  if (!Array.isArray(id_aulas) || id_aulas.length === 0) {
+    const err = new Error('id_aulas debe ser un arreglo con al menos un elemento');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // Normalizar y deduplicar ids de aulas
+  const requestedIds = Array.from(new Set(id_aulas.filter(Boolean).map(String)));
+  if (requestedIds.length === 0) {
+    return { insertedCount: 0, insertedIds: [], skippedExisting: [], totalRequested: 0 };
+  }
+
+  // Buscar existentes para no duplicar
+  const existentes = await AulaAlumno.find({ id_alumno, id_aula: { $in: requestedIds } })
+    .select('id_aula')
+    .lean();
+  const existentesSet = new Set(existentes.map(e => String(e.id_aula)));
+
+  const toInsertIds = requestedIds.filter(id => !existentesSet.has(id));
+  const docs = toInsertIds.map(id_aula => ({ id_aula, id_alumno, estado: 'en curso' }));
+
+  let inserted = [];
+  if (docs.length > 0) {
+    const result = await AulaAlumno.insertMany(docs, { ordered: false });
+    inserted = result.map(d => String(d._id));
+  }
+
+  return {
+    insertedCount: inserted.length,
+    insertedIds: inserted,
+    skippedExisting: Array.from(existentesSet),
+    totalRequested: requestedIds.length,
+  };
+};

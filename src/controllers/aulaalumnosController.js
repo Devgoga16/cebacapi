@@ -58,3 +58,13 @@ exports.getAulaAlumnosPorPersona = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.bulkCreateAulaAlumnos = async (req, res, next) => {
+  try {
+    const { id_alumno, id_aulas } = req.body || {};
+    const result = await aulaalumnosService.bulkCreateAulaAlumnos(id_alumno, id_aulas);
+    sendResponse(res, { data: result, message: 'Inserción masiva realizada' });
+  } catch (err) {
+    next(err);
+  }
+};

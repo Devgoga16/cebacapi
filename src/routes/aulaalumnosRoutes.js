@@ -272,4 +272,57 @@ router.delete('/aulaalumnos/:id', aulaalumnosController.deleteAulaAlumno);
  */
 router.get('/aulaalumnos/persona/:id_persona', aulaalumnosController.getAulaAlumnosPorPersona);
 
+/**
+ * @swagger
+ * /aulaalumnos/bulk:
+ *   post:
+ *     summary: Inserta múltiples registros de AulaAlumno para un alumno con estado 'en curso'
+ *     tags: [AulaAlumnos]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               id_alumno:
+ *                 type: string
+ *                 description: ID de la persona (alumno)
+ *               id_aulas:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Lista de IDs de aulas
+ *     responses:
+ *       200:
+ *         description: Resultado de la inserción masiva
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     insertedCount:
+ *                       type: number
+ *                     insertedIds:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     skippedExisting:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     totalRequested:
+ *                       type: number
+ *                 message:
+ *                   type: string
+ *                 action_code:
+ *                   type: integer
+ */
+router.post('/aulaalumnos/bulk', aulaalumnosController.bulkCreateAulaAlumnos);
+
 module.exports = router;
