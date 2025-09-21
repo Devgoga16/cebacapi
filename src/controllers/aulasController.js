@@ -88,3 +88,14 @@ exports.iniciarAula = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getDocenteResumenAula = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { fecha } = req.query;
+    const data = await aulasService.getDocenteResumenAula(id, fecha);
+    sendResponse(res, { data });
+  } catch (err) {
+    next(err);
+  }
+};

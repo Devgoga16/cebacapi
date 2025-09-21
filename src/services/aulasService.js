@@ -1,6 +1,8 @@
 const Aula = require('../models/aula');
 const AulaAlumno = require('../models/aulaalumno');
 const Inscripcion = require('../models/inscripcion');
+const Asistencia = require('../models/asistencia');
+const mongoose = require('mongoose');
 
 function normalizeToLocalDayUTC(dateInput) {
   const now = dateInput ? new Date(dateInput) : new Date();
@@ -127,10 +129,114 @@ exports.iniciarAula = async (idAula) => {
   await aula.save();
   return aula;
 };
-// Lista todas las aulas donde una persona es profesor, agrupadas por ciclo
-// Devuelve un arreglo de grupos: [{ ciclo, aulas: [] }],
-// ordenado por prioridad: inscripcionesabiertas (true) primero, luego actual (true),
-// y finalmente por fecha_inicio del ciclo descendente. Los registros sin ciclo van al final.
+
+// Resumen para docente: header de aula, alumnos del salón con estado en el aula,
+// asistencia del día (si existe) y totales acumulados por alumno en el aula.
+exports.getDocenteResumenAula = async (idAula, fecha) => {
+  const [aula, aulaAlumnos] = await Promise.all([
+    Aula.findById(idAula)
+      .populate([
+        { path: 'id_curso', populate: { path: 'id_nivel' } },
+        { path: 'id_ciclo' },
+        { path: 'id_profesor', select: '-imagen' },
+      ])
+      .lean(),
+    AulaAlumno.find({ id_aula: idAula })
+      .populate({
+        path: 'id_alumno',
+        select: 'nombres apellido_paterno apellido_materno numero_documento',
+      })
+      .lean(),
+  ]);
+
+  if (!aula) {
+    const err = new Error('Aula no encontrada');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const fechaClave = normalizeToLocalDayUTC(fecha);
+
+  // IDs de alumnos del aula
+  const alumnoIds = aulaAlumnos
+    .map((aa) => aa.id_alumno?._id || aa.id_alumno)
+    .filter(Boolean)
+    .map((x) => String(x));
+
+  // Asistencia del día para esos alumnos
+  let asistenciasHoy = [];
+  if (alumnoIds.length > 0) {
+    asistenciasHoy = await Asistencia.find({
+      id_aula: idAula,
+      id_alumno: { $in: alumnoIds },
+      fecha: fechaClave,
+    })
+      .select('id_alumno estado observacion')
+      .lean();
+  }
+  const mapAsisHoy = new Map(asistenciasHoy.map((a) => [String(a.id_alumno), a]));
+
+  // Totales acumulados por alumno en este aula
+  let totalesPorAlumno = new Map();
+  if (alumnoIds.length > 0) {
+    const agg = await Asistencia.aggregate([
+      {
+        $match: {
+          id_aula: new mongoose.Types.ObjectId(String(idAula)),
+          id_alumno: { $in: alumnoIds.map((id) => new mongoose.Types.ObjectId(id)) },
+        },
+      },
+      {
+        $group: {
+          _id: { id_alumno: '$id_alumno', estado: '$estado' },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+    // Construir mapa: id_alumno -> { presente, ausente, tarde, justificado }
+    totalesPorAlumno = new Map();
+    for (const row of agg) {
+      const id = String(row._id.id_alumno);
+      const estado = row._id.estado;
+      if (!totalesPorAlumno.has(id)) {
+        totalesPorAlumno.set(id, { presente: 0, ausente: 0, tarde: 0, justificado: 0 });
+      }
+      const obj = totalesPorAlumno.get(id);
+      if (estado in obj) obj[estado] += row.count;
+    }
+  }
+
+  // Totales del día por estado para el aula
+  const resumenDia = { presente: 0, ausente: 0, tarde: 0, justificado: 0 };
+  for (const a of asistenciasHoy) {
+    if (a.estado in resumenDia) resumenDia[a.estado]++;
+  }
+
+  // Armar lista de alumnos final
+  const alumnos = aulaAlumnos.map((aa) => {
+    const id = String(aa.id_alumno?._id || aa.id_alumno);
+    const hoy = mapAsisHoy.get(id);
+    const tot = totalesPorAlumno.get(id) || { presente: 0, ausente: 0, tarde: 0, justificado: 0 };
+    return {
+      id_alumno: id,
+      alumno: aa.id_alumno,
+      estado_aula: aa.estado || null,
+      asistencia_hoy: hoy ? { estado: hoy.estado, observacion: hoy.observacion || '' } : null,
+      totales_asistencia: tot,
+    };
+  });
+
+  return {
+    aula,
+    fecha: fechaClave,
+    resumen_dia: {
+      totales_por_estado: resumenDia,
+      total_registros: asistenciasHoy.length,
+    },
+    alumnos,
+  };
+};
+
 exports.getAulasPorProfesorAgrupadasPorCiclo = async (id_persona) => {
   if (!id_persona) {
     const err = new Error('id_persona es requerido');

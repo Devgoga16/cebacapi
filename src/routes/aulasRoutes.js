@@ -300,6 +300,80 @@ router.get('/aulas/:id/listas', aulasController.getListasPorAula);
 
 /**
  * @swagger
+ * /aulas/{id}/docente-resumen:
+ *   get:
+ *     summary: Resumen para docente del aula (header, roster, asistencia del día y totales)
+ *     tags: [Aulas]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID del aula
+ *       - in: query
+ *         name: fecha
+ *         schema:
+ *           type: string
+ *           format: date
+ *         required: false
+ *         description: Fecha del día (YYYY-MM-DD). Si no se envía, se usa hoy.
+ *     responses:
+ *       200:
+ *         description: Resumen de aula para docente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     aula:
+ *                       type: object
+ *                     fecha:
+ *                       type: string
+ *                       format: date
+ *                     resumen_dia:
+ *                       type: object
+ *                       properties:
+ *                         totales_por_estado:
+ *                           type: object
+ *                         total_registros:
+ *                           type: integer
+ *                     alumnos:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id_alumno:
+ *                             type: string
+ *                           alumno:
+ *                             type: object
+ *                           estado_aula:
+ *                             type: string
+ *                           asistencia_hoy:
+ *                             type: object
+ *                           totales_asistencia:
+ *                             type: object
+ *                     solicitudes:
+ *                       type: object
+ *                       properties:
+ *                         pendientes:
+ *                           type: array
+ *                         rechazadas:
+ *                           type: array
+ *                         total_pendientes:
+ *                           type: integer
+ *                         total_rechazadas:
+ *                           type: integer
+ */
+router.get('/aulas/:id/docente-resumen', aulasController.getDocenteResumenAula);
+
+/**
+ * @swagger
  * /aulas/por-curso/{id_curso}/ciclo/{id_ciclo}:
  *   get:
  *     summary: Lista aulas por curso y ciclo
