@@ -19,6 +19,7 @@ const inscripcionesRoutes = require('./routes/inscripcionesRoutes');
 const authRoutes = require('./routes/authRoutes');
 const aulaalumnosRoutes = require('./routes/aulaalumnosRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const asistenciasRoutes = require('./routes/asistenciasRoutes');
 
 const app = express();
 app.use(cors());
@@ -57,6 +58,7 @@ app.use('/', inscripcionesRoutes);
 app.use('/', authRoutes);
 app.use('/', aulaalumnosRoutes);
 app.use('/', dashboardRoutes);
+app.use('/', asistenciasRoutes);
 
 // Middleware de manejo de errores
 app.use(errorHandler);

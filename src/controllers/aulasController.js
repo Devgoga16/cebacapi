@@ -78,3 +78,13 @@ exports.getAulasDocenteAgrupadasPorCiclo = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.iniciarAula = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const aula = await aulasService.iniciarAula(id);
+    sendResponse(res, { data: aula, message: 'Aula iniciada' });
+  } catch (err) {
+    next(err);
+  }
+};

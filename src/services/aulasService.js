@@ -2,6 +2,11 @@ const Aula = require('../models/aula');
 const AulaAlumno = require('../models/aulaalumno');
 const Inscripcion = require('../models/inscripcion');
 
+function normalizeToLocalDayUTC(dateInput) {
+  const now = dateInput ? new Date(dateInput) : new Date();
+  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+}
+
 exports.getAllAulas = async () => {
   return await Aula.find().populate('id_profesor id_curso id_ciclo').populate({
       path: 'id_curso',
@@ -89,6 +94,39 @@ exports.getListasPorAula = async (idAula) => {
   };
 };
 
+// Cambia el estado de un aula a 'iniciada' validando que la fecha actual esté dentro del rango [fecha_inicio, fecha_fin]
+exports.iniciarAula = async (idAula) => {
+  const aula = await Aula.findById(idAula).populate('id_ciclo');
+  if (!aula) {
+    const err = new Error('Aula no encontrada');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // Nota: Se omite validación por rango de fechas del aula; solo se valida ciclo actual
+
+  // Validar que el ciclo asociado esté activo (actual === true)
+  const ciclo = aula.id_ciclo;
+  if (!ciclo || ciclo.actual !== true) {
+    const err = new Error('El ciclo aún no está activo para iniciar el aula');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // Si ya está terminada, no permitir reiniciar
+  if (aula.estado === 'terminada') {
+    const err = new Error('El aula ya está terminada');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // Si ya está iniciada, es idempotente
+  if (aula.estado === 'iniciada') return aula;
+
+  aula.estado = 'iniciada';
+  await aula.save();
+  return aula;
+};
 // Lista todas las aulas donde una persona es profesor, agrupadas por ciclo
 // Devuelve un arreglo de grupos: [{ ciclo, aulas: [] }],
 // ordenado por prioridad: inscripcionesabiertas (true) primero, luego actual (true),

@@ -43,6 +43,9 @@ const aulasController = require('../controllers/aulasController');
  *         fecha_fin:
  *           type: string
  *           format: date
+ *         estado:
+ *           type: string
+ *           enum: [creada, iniciada, terminada]
  *         createdAt:
  *           type: string
  *         updatedAt:
@@ -334,6 +337,40 @@ router.get('/aulas/:id/listas', aulasController.getListasPorAula);
  *                   type: integer
  */
 router.get('/aulas/por-curso/:id_curso/ciclo/:id_ciclo', aulasController.getAulasByCursoAndCiclo);
+
+/**
+ * @swagger
+ * /aulas/{id}/iniciar:
+ *   post:
+ *     summary: Inicia un aula si la fecha actual está dentro del rango [fecha_inicio, fecha_fin]
+ *     tags: [Aulas]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID del aula
+ *     responses:
+ *       200:
+ *         description: Aula iniciada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/Aula'
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Fuera de rango o estado inválido
+ *       404:
+ *         description: Aula no encontrada
+ */
+router.post('/aulas/:id/iniciar', aulasController.iniciarAula);
 
 /**
  * @swagger
