@@ -127,6 +127,12 @@ exports.iniciarAula = async (idAula) => {
 
   aula.estado = 'iniciada';
   await aula.save();
+
+  // Al iniciar el aula, actualizar los registros de AulaAlumno asociados a 'en curso'
+  await AulaAlumno.updateMany(
+    { id_aula: idAula },
+    { $set: { estado: 'en curso' } }
+  );
   return aula;
 };
 
