@@ -358,17 +358,6 @@ router.get('/aulas/:id/listas', aulasController.getListasPorAula);
  *                             type: object
  *                           totales_asistencia:
  *                             type: object
- *                     solicitudes:
- *                       type: object
- *                       properties:
- *                         pendientes:
- *                           type: array
- *                         rechazadas:
- *                           type: array
- *                         total_pendientes:
- *                           type: integer
- *                         total_rechazadas:
- *                           type: integer
  */
 router.get('/aulas/:id/docente-resumen', aulasController.getDocenteResumenAula);
 
