@@ -213,18 +213,33 @@ exports.getDocenteResumenAula = async (idAula, fecha) => {
   }
 
   // Armar lista de alumnos final
-  const alumnos = aulaAlumnos.map((aa) => {
-    const id = String(aa.id_alumno?._id || aa.id_alumno);
-    const hoy = mapAsisHoy.get(id);
-    const tot = totalesPorAlumno.get(id) || { presente: 0, ausente: 0, tarde: 0, justificado: 0 };
-    return {
-      id_alumno: id,
-      alumno: aa.id_alumno,
-      estado_aula: aa.estado || null,
-      asistencia_hoy: hoy ? { estado: hoy.estado, observacion: hoy.observacion || '' } : null,
-      totales_asistencia: tot,
-    };
-  });
+  const alumnos = aulaAlumnos
+    .map((aa) => {
+      const id = String(aa.id_alumno?._id || aa.id_alumno);
+      const hoy = mapAsisHoy.get(id);
+      const tot = totalesPorAlumno.get(id) || { presente: 0, ausente: 0, tarde: 0, justificado: 0 };
+      return {
+        id_alumno: id,
+        alumno: aa.id_alumno,
+        estado_aula: aa.estado || null,
+        asistencia_hoy: hoy ? { estado: hoy.estado, observacion: hoy.observacion || '' } : null,
+        totales_asistencia: tot,
+      };
+    })
+    .sort((a, b) => {
+      const ap = (a.alumno?.apellido_paterno || '').toLowerCase();
+      const bp = (b.alumno?.apellido_paterno || '').toLowerCase();
+      if (ap !== bp) return ap.localeCompare(bp);
+      const am = (a.alumno?.apellido_materno || '').toLowerCase();
+      const bm = (b.alumno?.apellido_materno || '').toLowerCase();
+      if (am !== bm) return am.localeCompare(bm);
+      const an = (a.alumno?.nombres || '').toLowerCase();
+      const bn = (b.alumno?.nombres || '').toLowerCase();
+      if (an !== bn) return an.localeCompare(bn);
+      const ad = (a.alumno?.numero_documento || '').toLowerCase();
+      const bd = (b.alumno?.numero_documento || '').toLowerCase();
+      return ad.localeCompare(bd);
+    });
 
   return {
     aula,
