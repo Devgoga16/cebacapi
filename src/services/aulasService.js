@@ -298,3 +298,195 @@ exports.getAulasPorProfesorAgrupadasPorCiclo = async (id_persona) => {
 
   return ordenados;
 };
+
+// Resumen para admin: progreso de asistencia de un aula en un rango de fechas
+// Inputs: idAula, desde (YYYY-MM-DD opcional), hasta (YYYY-MM-DD opcional)
+// Output:
+// {
+//   aula,
+//   rango: { desde, hasta },
+//   sesiones_tomadas: numero_de_fechas_con_registros,
+//   resumen_general: { presente, ausente, tarde, justificado, total_registros },
+//   alumnos: [
+//     {
+//       id_alumno, alumno, estado_aula,
+//       totales: { presente, ausente, tarde, justificado, total_registros },
+//       porcentaje_presente: number, // 0..100
+//       porcentaje_efectivo: number  // (presente + tarde) / total * 100
+//     }
+//   ],
+//   timeline: [ { fecha, por_estado: { presente, ausente, tarde, justificado }, total_registros } ]
+// }
+exports.getAdminResumenAsistenciaAula = async (idAula, { desde, hasta } = {}) => {
+  const aula = await Aula.findById(idAula)
+    .populate([
+      { path: 'id_curso', populate: { path: 'id_nivel' } },
+      { path: 'id_ciclo' },
+      { path: 'id_profesor', select: '-imagen' },
+    ])
+    .lean();
+
+  if (!aula) {
+    const err = new Error('Aula no encontrada');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // Normalizar fechas; por defecto: desde = fecha_inicio del aula o hoy si no hay; hasta = min(hoy, fecha_fin del aula si existe)
+  const hoy = normalizeToLocalDayUTC();
+  const defDesde = aula.fecha_inicio ? normalizeToLocalDayUTC(aula.fecha_inicio) : hoy;
+  const defHastaRaw = aula.fecha_fin ? normalizeToLocalDayUTC(aula.fecha_fin) : hoy;
+  const hastaFinal = defHastaRaw > hoy ? hoy : defHastaRaw;
+
+  const desdeFecha = desde ? normalizeToLocalDayUTC(desde) : defDesde;
+  const hastaFecha = hasta ? normalizeToLocalDayUTC(hasta) : hastaFinal;
+
+  if (desdeFecha > hastaFecha) {
+    const err = new Error('El rango de fechas es inválido: desde > hasta');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // Roster del aula
+  const aulaAlumnos = await AulaAlumno.find({ id_aula: idAula })
+    .populate({
+      path: 'id_alumno',
+      select: 'nombres apellido_paterno apellido_materno numero_documento',
+    })
+    .lean();
+  const alumnoIds = aulaAlumnos
+    .map((aa) => aa.id_alumno?._id || aa.id_alumno)
+    .filter(Boolean)
+    .map((x) => String(x));
+
+  // Si no hay alumnos, devolver estructura básica
+  if (alumnoIds.length === 0) {
+    return {
+      aula,
+      rango: { desde: desdeFecha, hasta: hastaFecha },
+      sesiones_tomadas: 0,
+      resumen_general: { presente: 0, ausente: 0, tarde: 0, justificado: 0, total_registros: 0 },
+      alumnos: [],
+      timeline: [],
+    };
+  }
+
+  const idAulaObj = new mongoose.Types.ObjectId(String(idAula));
+  const alumnoObjIds = alumnoIds.map((id) => new mongoose.Types.ObjectId(id));
+
+  const [agg] = await Asistencia.aggregate([
+    {
+      $match: {
+        id_aula: idAulaObj,
+        id_alumno: { $in: alumnoObjIds },
+        fecha: { $gte: desdeFecha, $lte: hastaFecha },
+      },
+    },
+    {
+      $facet: {
+        porAlumno: [
+          {
+            $group: {
+              _id: { id_alumno: '$id_alumno', estado: '$estado' },
+              count: { $sum: 1 },
+            },
+          },
+        ],
+        porDia: [
+          {
+            $group: {
+              _id: { fecha: '$fecha', estado: '$estado' },
+              count: { $sum: 1 },
+            },
+          },
+        ],
+        fechasTomadas: [
+          { $group: { _id: '$fecha' } },
+          { $sort: { _id: 1 } },
+        ],
+        general: [
+          { $group: { _id: '$estado', count: { $sum: 1 } } },
+        ],
+      },
+    },
+  ]);
+
+  // Construir mapa por alumno
+  const totalesPorAlumno = new Map();
+  for (const row of agg.porAlumno || []) {
+    const id = String(row._id.id_alumno);
+    const estado = row._id.estado;
+    if (!totalesPorAlumno.has(id)) {
+      totalesPorAlumno.set(id, { presente: 0, ausente: 0, tarde: 0, justificado: 0, total_registros: 0 });
+    }
+    const obj = totalesPorAlumno.get(id);
+    if (estado in obj) obj[estado] += row.count;
+    obj.total_registros += row.count;
+  }
+
+  // Resumen general
+  const resumenGeneral = { presente: 0, ausente: 0, tarde: 0, justificado: 0, total_registros: 0 };
+  for (const row of agg.general || []) {
+    const estado = row._id;
+    if (estado in resumenGeneral) resumenGeneral[estado] += row.count;
+    resumenGeneral.total_registros += row.count;
+  }
+
+  // Timeline por fecha
+  const timelineMap = new Map();
+  for (const row of agg.porDia || []) {
+    const fechaKey = new Date(row._id.fecha).toISOString();
+    if (!timelineMap.has(fechaKey)) {
+      timelineMap.set(fechaKey, { fecha: row._id.fecha, por_estado: { presente: 0, ausente: 0, tarde: 0, justificado: 0 }, total_registros: 0 });
+    }
+    const t = timelineMap.get(fechaKey);
+    const estado = row._id.estado;
+    if (estado in t.por_estado) t.por_estado[estado] += row.count;
+    t.total_registros += row.count;
+  }
+  const timeline = Array.from(timelineMap.values()).sort((a, b) => a.fecha - b.fecha);
+
+  // Alumnos con porcentajes
+  const alumnos = aulaAlumnos
+    .map((aa) => {
+      const id = String(aa.id_alumno?._id || aa.id_alumno);
+      const tot = totalesPorAlumno.get(id) || { presente: 0, ausente: 0, tarde: 0, justificado: 0, total_registros: 0 };
+      const total = tot.total_registros || 0;
+      const porcentaje_presente = total > 0 ? (tot.presente * 100) / total : 0;
+      const efectivo = tot.presente + tot.tarde; // considerar tarde como asistencia efectiva
+      const porcentaje_efectivo = total > 0 ? (efectivo * 100) / total : 0;
+      return {
+        id_alumno: id,
+        alumno: aa.id_alumno,
+        estado_aula: aa.estado || null,
+        totales: tot,
+        porcentaje_presente: Number(porcentaje_presente.toFixed(2)),
+        porcentaje_efectivo: Number(porcentaje_efectivo.toFixed(2)),
+      };
+    })
+    .sort((a, b) => {
+      const ap = (a.alumno?.apellido_paterno || '').toLowerCase();
+      const bp = (b.alumno?.apellido_paterno || '').toLowerCase();
+      if (ap !== bp) return ap.localeCompare(bp);
+      const am = (a.alumno?.apellido_materno || '').toLowerCase();
+      const bm = (b.alumno?.apellido_materno || '').toLowerCase();
+      if (am !== bm) return am.localeCompare(bm);
+      const an = (a.alumno?.nombres || '').toLowerCase();
+      const bn = (b.alumno?.nombres || '').toLowerCase();
+      if (an !== bn) return an.localeCompare(bn);
+      const ad = (a.alumno?.numero_documento || '').toLowerCase();
+      const bd = (b.alumno?.numero_documento || '').toLowerCase();
+      return ad.localeCompare(bd);
+    });
+
+  const sesionesTomadas = (agg.fechasTomadas || []).length;
+
+  return {
+    aula,
+    rango: { desde: desdeFecha, hasta: hastaFecha },
+    sesiones_tomadas: sesionesTomadas,
+    resumen_general: resumenGeneral,
+    alumnos,
+    timeline,
+  };
+};

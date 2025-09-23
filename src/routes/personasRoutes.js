@@ -336,4 +336,98 @@ router.put('/personas/:id', personasController.updatePersona);
  */
 router.delete('/personas/:id', personasController.deletePersona);
 
+/**
+ * @swagger
+ * /personas/buscar:
+ *   get:
+ *     summary: Busca personas por número de documento y/o nombres/apellidos
+ *     tags: [Personas]
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Búsqueda global. Tokens numéricos matchean documento por prefijo; tokens texto matchean nombres/apellidos por prefijo.
+ *       - in: query
+ *         name: numero_documento
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Prefijo del número de documento (use exact=true para match exacto)
+ *       - in: query
+ *         name: exact
+ *         schema:
+ *           type: string
+ *           enum: ["true","false"]
+ *         required: false
+ *         description: Si se envía "true" y numero_documento, busca match exacto para documento
+ *       - in: query
+ *         name: nombres
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Prefijo de nombres
+ *       - in: query
+ *         name: apellido_paterno
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Prefijo de apellido paterno
+ *       - in: query
+ *         name: apellido_materno
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Prefijo de apellido materno
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         required: false
+ *         description: Página (por defecto 1)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         required: false
+ *         description: Límite por página (por defecto 20, máx 100)
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [apellidos, nombres, documento, recientes]
+ *         required: false
+ *         description: Ordenamiento
+ *     responses:
+ *       200:
+ *         description: Resultado de búsqueda
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     items:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Persona'
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         total:
+ *                           type: integer
+ *                         page:
+ *                           type: integer
+ *                         pages:
+ *                           type: integer
+ *                         limit:
+ *                           type: integer
+ */
+router.get('/personas/buscar', personasController.buscarPersonas);
+
 module.exports = router;

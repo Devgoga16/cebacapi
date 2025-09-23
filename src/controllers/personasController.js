@@ -58,3 +58,12 @@ exports.deletePersona = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.buscarPersonas = async (req, res, next) => {
+  try {
+    const data = await personasService.buscarPersonas(req.query || {});
+    sendResponse(res, { data });
+  } catch (err) {
+    next(err);
+  }
+};

@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const config = require('./config');
 
-const MONGO_URI = 'mongodb+srv://monkeywit:Ngluj7Fw8zRfk96z@cluster0.2elgi.mongodb.net/cebac?retryWrites=true&w=majority&appName=Cluster0';
+const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL || 'mongodb://localhost:27017/cebac';
 
 mongoose.connect(MONGO_URI, {
   useNewUrlParser: true,

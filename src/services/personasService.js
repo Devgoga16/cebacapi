@@ -1,5 +1,8 @@
 const Persona = require('../models/persona');
 const { compressBase64Image } = require('../utils/image');
+function escapeRegExp(str = '') {
+  return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 exports.getAllPersonas = async () => {
   return await Persona.find()
@@ -109,4 +112,99 @@ exports.updatePersona = async (id, data) => {
 exports.deletePersona = async (id) => {
   const result = await Persona.findByIdAndDelete(id);
   return !!result;
+};
+
+// Búsqueda por número de documento o por nombres/apellidos
+// Params admitidos:
+// - q: búsqueda global; si es numérica, matchea prefijo en numero_documento; si es texto, matchea prefijo en nombres/apellidos por token
+// - numero_documento: prefijo por defecto; exact=true para match exacto
+// - nombres, apellido_paterno, apellido_materno: prefijo individual por campo
+// - page (1..), limit (1..100), sort ('apellidos' por defecto)
+exports.buscarPersonas = async (params = {}) => {
+  const {
+    q,
+    numero_documento,
+    nombres,
+    apellido_paterno,
+    apellido_materno,
+    exact,
+    page = 1,
+    limit = 20,
+    sort = 'apellidos',
+  } = params;
+
+  const pg = Math.max(parseInt(page, 10) || 1, 1);
+  const lim = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100);
+
+  const ands = [];
+
+  // Filtro por numero_documento
+  if (numero_documento) {
+    if (String(exact) === 'true') {
+      ands.push({ numero_documento: String(numero_documento) });
+    } else {
+      ands.push({ numero_documento: { $regex: '^' + escapeRegExp(String(numero_documento)), $options: 'i' } });
+    }
+  }
+
+  // Filtros por campo individual (prefijo case-insensitive)
+  if (nombres) ands.push({ nombres: { $regex: '^' + escapeRegExp(String(nombres)), $options: 'i' } });
+  if (apellido_paterno) ands.push({ apellido_paterno: { $regex: '^' + escapeRegExp(String(apellido_paterno)), $options: 'i' } });
+  if (apellido_materno) ands.push({ apellido_materno: { $regex: '^' + escapeRegExp(String(apellido_materno)), $options: 'i' } });
+
+  // Búsqueda global q: tokenizar; si token es numérico -> documento; si texto -> nombres/apellidos
+  if (q && String(q).trim().length > 0) {
+    const tokens = String(q).trim().split(/\s+/);
+    for (const t of tokens) {
+      const isNum = /^\d+$/.test(t);
+      const escaped = escapeRegExp(t);
+      if (isNum) {
+        ands.push({ numero_documento: { $regex: '^' + escaped } });
+      } else {
+        ands.push({
+          $or: [
+            { nombres: { $regex: '^' + escaped, $options: 'i' } },
+            { apellido_paterno: { $regex: '^' + escaped, $options: 'i' } },
+            { apellido_materno: { $regex: '^' + escaped, $options: 'i' } },
+          ],
+        });
+      }
+    }
+  }
+
+  const filter = ands.length ? { $and: ands } : {};
+
+  // Sort options
+  let sortObj = {};
+  switch (String(sort)) {
+    case 'nombres':
+      sortObj = { nombres: 1, apellido_paterno: 1, apellido_materno: 1 };
+      break;
+    case 'documento':
+      sortObj = { numero_documento: 1 };
+      break;
+    case 'recientes':
+      sortObj = { createdAt: -1 };
+      break;
+    case 'apellidos':
+    default:
+      sortObj = { apellido_paterno: 1, apellido_materno: 1, nombres: 1 };
+  }
+
+  const [items, total] = await Promise.all([
+    Persona.find(filter)
+      .select('-imagen')
+      .sort(sortObj)
+      .collation({ locale: 'es', strength: 1 })
+      .skip((pg - 1) * lim)
+      .limit(lim)
+      .lean(),
+    Persona.countDocuments(filter),
+  ]);
+
+  const pages = Math.max(Math.ceil(total / lim), 1);
+  return {
+    items,
+    pagination: { total, page: pg, pages, limit: lim },
+  };
 };

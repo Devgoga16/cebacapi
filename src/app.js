@@ -26,7 +26,6 @@ app.use(cors());
 // Aumenta el tamaño máximo del body para permitir imágenes en base64 u otros payloads grandes
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-const port = process.env.PORT || 3000;
 
 const swaggerOptions = {
   definition: {
@@ -42,7 +41,11 @@ const swaggerOptions = {
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
+// Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use('/api/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// Rutas en raíz (compatibilidad)
 app.use('/', rolesRoutes);
 app.use('/', usuariosRoutes);
 app.use('/', ciclosRoutes);
@@ -60,10 +63,25 @@ app.use('/', aulaalumnosRoutes);
 app.use('/', dashboardRoutes);
 app.use('/', asistenciasRoutes);
 
+// Rutas también bajo prefijo /api
+app.use('/api', rolesRoutes);
+app.use('/api', usuariosRoutes);
+app.use('/api', ciclosRoutes);
+app.use('/api', nivelesRoutes);
+app.use('/api', iglesiasRoutes);
+app.use('/api', ministeriosRoutes);
+app.use('/api', categoriaanunciosRoutes);
+app.use('/api', anunciosRoutes);
+app.use('/api', cursosRoutes);
+app.use('/api', personasRoutes);
+app.use('/api', aulasRoutes);
+app.use('/api', inscripcionesRoutes);
+app.use('/api', authRoutes);
+app.use('/api', aulaalumnosRoutes);
+app.use('/api', dashboardRoutes);
+app.use('/api', asistenciasRoutes);
+
 // Middleware de manejo de errores
 app.use(errorHandler);
 
-app.listen(port, () => {
-  console.log(`API escuchando en http://localhost:${port}`);
-  console.log(`Documentación Swagger en http://localhost:${port}/api-docs`);
-});
+module.exports = app;
