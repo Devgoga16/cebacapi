@@ -10,12 +10,74 @@ function normalizeToLocalDayUTC(dateInput) {
 }
 
 exports.getAllAulas = async () => {
-  return await Aula.find().populate('id_profesor id_curso id_ciclo').populate({
-      path: 'id_curso',
-      populate: {
-        path: 'id_nivel'
+  return await Aula.aggregate([
+    {
+      $lookup: {
+        from: 'personas',
+        localField: 'id_profesor',
+        foreignField: '_id',
+        as: 'id_profesor',
+        pipeline: [
+          {
+            $project: {
+              nombres: 1,
+              apellido_paterno: 1,
+              apellido_materno: 1,
+              email: 1,
+              telefono: 1,
+              numero_documento: 1,
+              // Excluir imagen para performance
+            }
+          }
+        ]
       }
-    });
+    },
+    {
+      $lookup: {
+        from: 'cursos',
+        localField: 'id_curso',
+        foreignField: '_id',
+        as: 'id_curso_temp'
+      }
+    },
+    {
+      $lookup: {
+        from: 'niveles',
+        localField: 'id_curso_temp.id_nivel',
+        foreignField: '_id',
+        as: 'nivel_temp'
+      }
+    },
+    {
+      $lookup: {
+        from: 'ciclos',
+        localField: 'id_ciclo',
+        foreignField: '_id',
+        as: 'id_ciclo'
+      }
+    },
+    {
+      $addFields: {
+        'id_profesor': { $arrayElemAt: ['$id_profesor', 0] },
+        'id_curso': {
+          $mergeObjects: [
+            { $arrayElemAt: ['$id_curso_temp', 0] },
+            { id_nivel: { $arrayElemAt: ['$nivel_temp', 0] } }
+          ]
+        },
+        'id_ciclo': { $arrayElemAt: ['$id_ciclo', 0] }
+      }
+    },
+    {
+      $project: {
+        id_curso_temp: 0,
+        nivel_temp: 0
+      }
+    },
+    {
+      $sort: { createdAt: -1 }
+    }
+  ]);
 };
 
 exports.getAulaById = async (id) => {
