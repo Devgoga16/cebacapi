@@ -62,8 +62,12 @@ exports.getAulaAlumnosPorPersona = async (req, res, next) => {
 
 exports.bulkCreateAulaAlumnos = async (req, res, next) => {
   try {
-    const { id_alumno, id_aulas } = req.body || {};
-    const result = await aulaalumnosService.bulkCreateAulaAlumnos(id_alumno, id_aulas);
+    const { id_alumno, id_aulas, carta_pastoral, ...additionalData } = req.body || {};
+    // Si viene carta_pastoral, incluirla en additionalData
+    if (carta_pastoral) {
+      additionalData.carta_pastoral = carta_pastoral;
+    }
+    const result = await aulaalumnosService.bulkCreateAulaAlumnos(id_alumno, id_aulas, additionalData);
     sendResponse(res, { data: result, message: 'Inserción masiva realizada' });
   } catch (err) {
     next(err);

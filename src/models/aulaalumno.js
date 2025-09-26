@@ -15,6 +15,15 @@ const AulaAlumnoSchema = new mongoose.Schema({
     type: String,
     enum: ['aprobado', 'reprobado', 'en curso', 'retirado', 'inscrito'],
     default: 'en curso'
+  },
+  carta_pastoral: {
+    data: {
+      type: String, // base64
+      required: false,
+    },
+    filename: { type: String, required: false, trim: true },
+    mimetype: { type: String, required: false, trim: true },
+    size: { type: Number, required: false }, // en bytes
   }
 }, {
   collection: 'aulaalumnos',

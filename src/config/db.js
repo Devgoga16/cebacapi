@@ -1,6 +1,9 @@
 const mongoose = require('mongoose');
 const config = require('./config');
 
+// Cargar variables de entorno
+require('dotenv').config();
+
 const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL || 'mongodb://localhost:27017/cebac';
 const isVercel = !!process.env.VERCEL;
 const usingLocalhost = /^mongodb:\/\//.test(MONGO_URI) && /localhost|127\.0\.0\.1/.test(MONGO_URI);

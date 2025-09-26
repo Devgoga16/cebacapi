@@ -4,17 +4,18 @@
   "description": "API de ejemplo con Express y Swagger",
   "main": "src/app.js",
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "nodemon src/app.js",
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
     "migrate:persona-apellidos": "node scripts/migrate_persona_apellidos.js"
   },
   "dependencies": {
     "axios": "^1.12.2",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
     "express": "^4.18.2",
-    "sharp": "^0.33.4",
     "mongoose": "^7.6.0",
+    "sharp": "^0.33.4",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
   },

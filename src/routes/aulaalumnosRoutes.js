@@ -26,7 +26,19 @@ const aulaalumnosController = require('../controllers/aulaalumnosController');
  *           description: ID del alumno (ObjectId)
  *         estado:
  *           type: string
- *           enum: [aprobado, reprobado, en curso]
+ *           enum: [aprobado, reprobado, en curso, retirado, inscrito]
+ *         carta_pastoral:
+ *           type: object
+ *           properties:
+ *             data:
+ *               type: string
+ *               description: Imagen en base64 (data URI o base64 plano)
+ *             filename:
+ *               type: string
+ *             mimetype:
+ *               type: string
+ *             size:
+ *               type: number
  *         createdAt:
  *           type: string
  *         updatedAt:
@@ -300,6 +312,44 @@ router.get('/aulaalumnos/persona/:id_persona', aulaalumnosController.getAulaAlum
  *                 items:
  *                   type: string
  *                 description: Lista de IDs de aulas
+ *               carta_pastoral:
+ *                 description: |
+ *                   Carta pastoral - puede ser:
+ *                   - Un objeto único: aplicado a todos los registros
+ *                   - Un array de objetos: uno por cada aula en id_aulas (mismo orden)
+ *                   
+ *                   Ejemplos:
+ *                   - Única: {"data": "base64...", "filename": "carta.jpg"}
+ *                   - Array: [{"data": "base64_1..."}, {"data": "base64_2..."}]
+ *                 oneOf:
+ *                   - type: object
+ *                     title: Carta pastoral única
+ *                     description: Carta pastoral única aplicada a todos los registros
+ *                     properties:
+ *                       data:
+ *                         type: string
+ *                         description: Imagen en base64
+ *                       filename:
+ *                         type: string
+ *                       mimetype:
+ *                         type: string
+ *                       size:
+ *                         type: number
+ *                   - type: array
+ *                     title: Array de cartas pastorales
+ *                     description: Array de cartas pastorales, una por cada aula en id_aulas
+ *                     items:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           type: string
+ *                           description: Imagen en base64
+ *                         filename:
+ *                           type: string
+ *                         mimetype:
+ *                           type: string
+ *                         size:
+ *                           type: number
  *     responses:
  *       200:
  *         description: Resultado de la inserción masiva

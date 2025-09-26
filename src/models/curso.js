@@ -22,6 +22,10 @@ const CursoSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    carta_pastoral: {
+      type: Boolean,
+      default: false,
+    },
     prerequisitos: [
       {
         tipo: {

@@ -1,4 +1,5 @@
 const AulaAlumno = require('../models/aulaalumno');
+const { compressBase64Image } = require('../utils/image');
 
 exports.getAllAulaAlumnos = async () => {
   return await AulaAlumno.find().populate('id_aula id_alumno');
@@ -9,11 +10,34 @@ exports.getAulaAlumnoById = async (id) => {
 };
 
 exports.createAulaAlumno = async (data) => {
+  // Si viene carta_pastoral base64, comprimimos antes de guardar
+  if (data && data.carta_pastoral && data.carta_pastoral.data) {
+    try {
+      const { base64, mimetype, size } = await compressBase64Image(data.carta_pastoral.data, { maxWidth: 1024, quality: 75, format: 'jpeg' });
+      data.carta_pastoral.data = base64;
+      data.carta_pastoral.mimetype = data.carta_pastoral.mimetype || mimetype;
+      data.carta_pastoral.size = size;
+      // Si el filename apunta a .png u otro, opcionalmente podríamos cambiar a .jpg, pero mantenemos si viene
+    } catch (e) {
+      console.error('Fallo al comprimir carta_pastoral en createAulaAlumno:', e?.message || e);
+    }
+  }
   const aulaAlumno = new AulaAlumno(data);
   return await aulaAlumno.save();
 };
 
 exports.updateAulaAlumno = async (id, data) => {
+  // Comprimir carta_pastoral si viene nueva imagen
+  if (data && data.carta_pastoral && data.carta_pastoral.data) {
+    try {
+      const { base64, mimetype, size } = await compressBase64Image(data.carta_pastoral.data, { maxWidth: 1024, quality: 75, format: 'jpeg' });
+      data.carta_pastoral.data = base64;
+      data.carta_pastoral.mimetype = data.carta_pastoral.mimetype || mimetype;
+      data.carta_pastoral.size = size;
+    } catch (e) {
+      console.error('Fallo al comprimir carta_pastoral en updateAulaAlumno:', e?.message || e);
+    }
+  }
   return await AulaAlumno.findByIdAndUpdate(id, data, { new: true }).populate('id_aula id_alumno');
 };
 
@@ -68,9 +92,10 @@ exports.getAulaAlumnosPorPersona = async (id_persona, options = {}) => {
   return registros;
 };
 
-// Inserción masiva de AulaAlumno: recibe id_alumno y lista de id_aulas y crea registros con estado 'en curso'
+// Inserción masiva de AulaAlumno: recibe id_alumno y lista de id_aulas y crea registros con estado 'inscrito'
+// También puede recibir carta_pastoral como array (uno por cada aula) o como objeto único (aplicado a todos)
 // Omite pares que ya existan (id_alumno + id_aula) y devuelve un resumen
-exports.bulkCreateAulaAlumnos = async (id_alumno, id_aulas) => {
+exports.bulkCreateAulaAlumnos = async (id_alumno, id_aulas, additionalData = {}) => {
   if (!id_alumno) {
     const err = new Error('id_alumno es requerido');
     err.statusCode = 400;
@@ -95,7 +120,53 @@ exports.bulkCreateAulaAlumnos = async (id_alumno, id_aulas) => {
   const existentesSet = new Set(existentes.map(e => String(e.id_aula)));
 
   const toInsertIds = requestedIds.filter(id => !existentesSet.has(id));
-  const docs = toInsertIds.map(id_aula => ({ id_aula, id_alumno, estado: 'inscrito' }));
+
+  // Preparar documentos con carta_pastoral específica por aula
+  // carta_pastoral puede ser:
+  // - Objeto único: aplicado a todos los registros
+  // - Array: carta_pastoral[index] asignada al registro correspondiente
+  const docs = [];
+  for (let index = 0; index < toInsertIds.length; index++) {
+    const id_aula = toInsertIds[index];
+    const doc = { id_aula, id_alumno, estado: 'inscrito' };
+
+    // Procesar carta_pastoral si existe
+    if (additionalData.carta_pastoral) {
+      let cartaPastoralData = null;
+
+      if (Array.isArray(additionalData.carta_pastoral)) {
+        // Si hay carta_pastoral para este índice, usarla
+        if (additionalData.carta_pastoral[index]) {
+          cartaPastoralData = additionalData.carta_pastoral[index];
+        }
+      } else {
+        // Si es un objeto único, aplicarlo a todos
+        cartaPastoralData = additionalData.carta_pastoral;
+      }
+
+      // Si tenemos datos de carta_pastoral, comprimir la imagen base64
+      if (cartaPastoralData && cartaPastoralData.data) {
+        try {
+          const { base64, mimetype, size } = await compressBase64Image(cartaPastoralData.data, { maxWidth: 1024, quality: 75, format: 'jpeg' });
+          doc.carta_pastoral = {
+            data: base64,
+            filename: cartaPastoralData.filename,
+            mimetype: cartaPastoralData.mimetype || mimetype,
+            size: size
+          };
+        } catch (e) {
+          console.error('Fallo al comprimir carta_pastoral en bulkCreateAulaAlumnos:', e?.message || e);
+          // Si falla la compresión, guardar los datos originales
+          doc.carta_pastoral = cartaPastoralData;
+        }
+      } else if (cartaPastoralData) {
+        // Si no hay data pero sí otros campos, guardarlos
+        doc.carta_pastoral = cartaPastoralData;
+      }
+    }
+
+    docs.push(doc);
+  }
 
   let inserted = [];
   if (docs.length > 0) {

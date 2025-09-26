@@ -135,7 +135,7 @@ exports.getListasPorAula = async (idAula) => {
   ]);
 
   // Agrupar para tabs del front según estado del registro en AulaAlumno
-  const estadosActivos = new Set(['aprobado', 'reprobado', 'en curso']);
+  const estadosActivos = new Set(['aprobado', 'reprobado', 'en curso', 'inscrito']);
   const estudiantesActivos = aulaAlumnos.filter(a => estadosActivos.has(String(a?.estado || '').toLowerCase()));
   const estudiantesInactivos = aulaAlumnos.filter(a => String(a?.estado || '').toLowerCase() === 'retirado');
 
