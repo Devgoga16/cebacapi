@@ -382,4 +382,36 @@ router.get('/aulaalumnos/persona/:id_persona', aulaalumnosController.getAulaAlum
  */
 router.post('/aulaalumnos/bulk', aulaalumnosController.bulkCreateAulaAlumnos);
 
+/**
+ * @swagger
+ * /aulaalumnos/inscribir/{id}:
+ *   put:
+ *     summary: Inscribe un AulaAlumno cambiando su estado a 'inscrito'
+ *     tags: [AulaAlumnos]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID del AulaAlumno a inscribir
+ *     responses:
+ *       200:
+ *         description: AulaAlumno inscrito exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/AulaAlumno'
+ *                 message:
+ *                   type: string
+ *                 action_code:
+ *                   type: integer
+ */
+router.put('/aulaalumnos/aprobar/:id', aulaalumnosController.inscribirAulaAlumno);
+
 module.exports = router;

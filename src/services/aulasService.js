@@ -139,7 +139,7 @@ exports.getListasPorAula = async (idAula) => {
   const estudiantesActivos = aulaAlumnos.filter(a => estadosActivos.has(String(a?.estado || '').toLowerCase()));
   const estudiantesInactivos = aulaAlumnos.filter(a => String(a?.estado || '').toLowerCase() === 'retirado');
 
-  const solicitudesPendientes = inscripciones.filter(i => i.estado === 'Pendiente');
+  const solicitudesPendientes = aulaAlumnos.filter(a => String(a?.estado || '').toLowerCase() === 'pendiente');
   const solicitudesRechazadas = inscripciones.filter(i => i.estado === 'Rechazado');
 
   return {

@@ -73,3 +73,12 @@ exports.bulkCreateAulaAlumnos = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.inscribirAulaAlumno = async (req, res, next) => {
+  try {
+    const aulaAlumno = await aulaalumnosService.inscribirAulaAlumno(req.params.id);
+    sendResponse(res, { data: aulaAlumno, message: 'AulaAlumno inscrito exitosamente' });
+  } catch (err) {
+    next(err);
+  }
+};

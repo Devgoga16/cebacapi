@@ -128,7 +128,7 @@ exports.bulkCreateAulaAlumnos = async (id_alumno, id_aulas, additionalData = {})
   const docs = [];
   for (let index = 0; index < toInsertIds.length; index++) {
     const id_aula = toInsertIds[index];
-    const doc = { id_aula, id_alumno, estado: 'inscrito' };
+    const doc = { id_aula, id_alumno, estado: 'pendiente' };
 
     // Procesar carta_pastoral si existe
     if (additionalData.carta_pastoral) {
@@ -162,6 +162,7 @@ exports.bulkCreateAulaAlumnos = async (id_alumno, id_aulas, additionalData = {})
       } else if (cartaPastoralData) {
         // Si no hay data pero sí otros campos, guardarlos
         doc.carta_pastoral = cartaPastoralData;
+        doc.estado = 'inscrito';
       }
     }
 
@@ -181,3 +182,21 @@ exports.bulkCreateAulaAlumnos = async (id_alumno, id_aulas, additionalData = {})
     totalRequested: requestedIds.length,
   };
 };
+
+// Inscribe un AulaAlumno cambiando su estado a 'inscrito'
+exports.inscribirAulaAlumno = async (id) => {
+  const aulaAlumno = await AulaAlumno.findByIdAndUpdate(
+    id,
+    { estado: 'inscrito' },
+    { new: true }
+  ).populate('id_aula id_alumno');
+
+  if (!aulaAlumno) {
+    const err = new Error('AulaAlumno no encontrado');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  return aulaAlumno;
+};
+
