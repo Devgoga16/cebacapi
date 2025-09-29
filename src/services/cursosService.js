@@ -38,10 +38,13 @@ exports.getCursosAgrupadosPorNivel = async (id_ciclo) => {
     .populate('prerequisitos.ref_id')
     .lean();
 
+  // Filtrar cursos que no tengan nivel asignado
+  const cursosConNivel = cursos.filter(c => c.id_nivel);
+
   // Si se envía id_ciclo, traemos aulas de ese ciclo e indexamos por id_curso
   let aulasByCurso = new Map();
   if (id_ciclo) {
-    const cursoIds = cursos.map(c => c._id);
+    const cursoIds = cursosConNivel.map(c => c._id);
     const aulas = await Aula.find({ id_ciclo, id_curso: { $in: cursoIds } })
       .select('_id id_curso dia hora_inicio hora_fin aforo es_presencial fecha_inicio fecha_fin')
       .lean();
@@ -54,9 +57,9 @@ exports.getCursosAgrupadosPorNivel = async (id_ciclo) => {
   }
 
   const map = new Map();
-  for (const c of cursos) {
-    const nivel = c.id_nivel || null;
-    const nivelKey = (nivel && (nivel._id?.toString?.() || nivel.toString?.())) || 'sin_nivel';
+  for (const c of cursosConNivel) {
+    const nivel = c.id_nivel;
+    const nivelKey = (nivel._id?.toString?.() || nivel.toString?.());
     if (!map.has(nivelKey)) map.set(nivelKey, { nivel, cursos: [] });
     // Adjuntar aulas del ciclo si corresponde
     const aulas = aulasByCurso.get(String(c._id)) || [];
@@ -64,9 +67,6 @@ exports.getCursosAgrupadosPorNivel = async (id_ciclo) => {
   }
 
   const niveles = Array.from(map.values()).sort((a, b) => {
-    if (!a.nivel && !b.nivel) return 0;
-    if (!a.nivel) return 1;
-    if (!b.nivel) return -1;
     const an = a.nivel.nombre_nivel || '';
     const bn = b.nivel.nombre_nivel || '';
     return an.localeCompare(bn, undefined, { numeric: true, sensitivity: 'base' });
@@ -195,11 +195,11 @@ exports.getMallaCurricularPorPersona = async (id_persona, options = {}) => {
   });
 
   if (groupBy === 'nivel') {
-    // Agrupar por curso.id_nivel
+    // Agrupar por curso.id_nivel (todos los cursos ya tienen nivel asignado)
     const grupos = new Map();
     for (const item of porCurso) {
-      const nivel = item.curso?.id_nivel || null;
-      const nivelKey = nivel ? String(nivel._id || nivel) : 'sin_nivel';
+      const nivel = item.curso.id_nivel;
+      const nivelKey = String(nivel._id || nivel);
       if (!grupos.has(nivelKey)) grupos.set(nivelKey, { nivel, cursos: [], total_registros: 0, cursos_con_registros: 0 });
       const g = grupos.get(nivelKey);
       g.cursos.push(item);
@@ -219,6 +219,9 @@ exports.getCursosAgrupadosPorNivelIdAsc = async () => {
     require('../models/nivel').find().lean(),
   ]);
 
+  // Filtrar cursos que no tengan nivel asignado
+  const cursosConNivel = cursos.filter(c => c.id_nivel);
+
   // Precrear grupos para todos los niveles existentes (aunque no tengan cursos)
   const grupos = new Map(); // key: id_nivel string -> { nivel, cursos: [] }
   for (const n of nivelesAll) {
@@ -226,26 +229,17 @@ exports.getCursosAgrupadosPorNivelIdAsc = async () => {
     grupos.set(key, { nivel: n, cursos: [] });
   }
 
-  // También consideramos cursos sin nivel asignado
-  const SIN_NIVEL_KEY = 'sin_nivel';
-  grupos.set(SIN_NIVEL_KEY, { nivel: null, cursos: [] });
-
-  // Distribuir cursos en su grupo
-  for (const c of cursos) {
-    const nivelDoc = c.id_nivel || null;
-    const nivelKey = nivelDoc ? String(nivelDoc._id || nivelDoc) : SIN_NIVEL_KEY;
+  // Distribuir cursos en su grupo (solo cursos que tienen nivel)
+  for (const c of cursosConNivel) {
+    const nivelDoc = c.id_nivel;
+    const nivelKey = String(nivelDoc._id || nivelDoc);
     if (!grupos.has(nivelKey)) grupos.set(nivelKey, { nivel: nivelDoc, cursos: [] });
     grupos.get(nivelKey).cursos.push(c);
   }
 
-  // Ordenar por id de nivel asc; 'sin_nivel' al final
+  // Ordenar por id de nivel asc
   const niveles = Array.from(grupos.entries())
-    .sort(([ka], [kb]) => {
-      if (ka === SIN_NIVEL_KEY && kb === SIN_NIVEL_KEY) return 0;
-      if (ka === SIN_NIVEL_KEY) return 1;
-      if (kb === SIN_NIVEL_KEY) return -1;
-      return ka.localeCompare(kb);
-    })
+    .sort(([ka], [kb]) => ka.localeCompare(kb))
     .map(([, group]) => {
       // Ordenar cursos: primero obligatorios (electivo !== true), luego electivos (electivo === true)
       const cursosOrdenados = (group.cursos || []).slice().sort((a, b) => {
