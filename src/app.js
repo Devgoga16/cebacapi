@@ -20,6 +20,7 @@ const authRoutes = require('./routes/authRoutes');
 const aulaalumnosRoutes = require('./routes/aulaalumnosRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const asistenciasRoutes = require('./routes/asistenciasRoutes');
+const requerimientosAulaRoutes = require('./routes/requerimientosAulaRoutes');
 
 const app = express();
 app.use(cors());
@@ -62,6 +63,7 @@ app.use('/', authRoutes);
 app.use('/', aulaalumnosRoutes);
 app.use('/', dashboardRoutes);
 app.use('/', asistenciasRoutes);
+app.use('/', requerimientosAulaRoutes);
 
 // Rutas también bajo prefijo /api
 app.use('/api', rolesRoutes);
@@ -80,6 +82,7 @@ app.use('/api', authRoutes);
 app.use('/api', aulaalumnosRoutes);
 app.use('/api', dashboardRoutes);
 app.use('/api', asistenciasRoutes);
+app.use('/api', requerimientosAulaRoutes);
 
 // Middleware de manejo de errores
 app.use(errorHandler);

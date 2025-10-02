@@ -95,3 +95,53 @@ exports.getDocenteDashboard = async (id_persona) => {
     anuncios,
   };
 };
+
+exports.getAdminDashboard = async (id_persona) => {
+  // 1. Ciclo actual
+  const cicloActual = await Ciclo.findOne({ actual: true });
+
+  // 2. Conteo de usuarios (total de personas)
+  const totalUsuarios = await Persona.countDocuments();
+
+  // 3. Conteo de alumnos (personas con rol estudiante)
+  const rolEstudiante = await Rol.findOne({ nombre_rol: "estudiante" });
+  const totalAlumnos = rolEstudiante 
+    ? await Persona.countDocuments({ 
+        id_user: { 
+          $in: await require('../models/usuario').find({ roles: rolEstudiante._id }).distinct('_id')
+        }
+      })
+    : 0;
+
+  // 4. Conteo de profesores (personas con rol docente)
+  const rolDocente = await Rol.findOne({ nombre_rol: "docente" });
+  const totalProfesores = rolDocente
+    ? await Persona.countDocuments({ 
+        id_user: { 
+          $in: await require('../models/usuario').find({ roles: rolDocente._id }).distinct('_id')
+        }
+      })
+    : 0;
+
+  // 5. Conteo de aulas
+  const totalAulas = await Aula.countDocuments();
+
+  // 3. Anuncios para el rol docente y fecha_caducidad >= hoy
+  const now = new Date();
+  const hoyUTC = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+
+  let rol = await Rol.findOne({ nombre_rol: "admin" });
+  let anuncios = await Anuncio.find({
+    roles: { $in: [rol._id] },
+    fecha_caducidad: { $gte: hoyUTC },
+  }).populate('id_categoria_anuncio roles id_publicador');
+
+  return {
+    cicloActual,
+    totalUsuarios,
+    totalAlumnos,
+    totalProfesores,
+    totalAulas,
+    anuncios
+  };
+};

@@ -20,3 +20,13 @@ exports.getDocenteDashboard = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getAdminDashboard = async (req, res, next) => {
+  try {
+    const { id_persona } = req.params;
+    const data = await dashboardService.getAdminDashboard(id_persona);
+    sendResponse(res, { data });
+  } catch (err) {
+    next(err);
+  }
+};
