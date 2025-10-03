@@ -194,7 +194,7 @@ exports.createUsuarioYPersona = async (payload) => {
   const createdPersona = await personaDoc.save();
 
   // Enviar correo de validación
-  await sendValidationEmail(createdPersona.email, createdUsuario._id);
+  //await sendValidationEmail(createdPersona.email, createdUsuario._id);
 
   return { usuario: createdUsuario, persona: createdPersona };
   } catch (err) {
