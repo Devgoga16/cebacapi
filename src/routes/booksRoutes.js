@@ -304,4 +304,38 @@ router.put('/books/sales/:id/deliver', booksController.entregarLibros);
  */
 router.put('/books/sales/:id/status', booksController.cambiarEstadoVenta);
 
+/**
+ * @swagger
+ * /books/my-purchases/{id_persona}:
+ *   get:
+ *     summary: Ver mis compras por persona
+ *     tags: [Books]
+ *     parameters:
+ *       - in: path
+ *         name: id_persona
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de la persona
+ *     responses:
+ *       200:
+ *         description: Lista de compras de la persona
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Sale'
+ *                 message:
+ *                   type: string
+ *                 action_code:
+ *                   type: integer
+ */
+router.get('/books/my-purchases/:id_persona', booksController.verMisCompras);
+
 module.exports = router;

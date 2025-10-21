@@ -177,3 +177,12 @@ exports.cambiarEstadoVenta = async (id_venta, nuevoEstado) => {
 
   return venta;
 };
+
+// Servicio para ver mis compras por persona
+exports.verMisCompras = async (id_persona) => {
+  return await Sale.find({ buyer: id_persona })
+    .populate('buyer', 'nombres apellido_paterno apellido_materno')
+    .populate('deliveredBy', 'nombres apellido_paterno apellido_materno')
+    .populate('books.book')
+    .sort({ saleDate: -1 });
+};

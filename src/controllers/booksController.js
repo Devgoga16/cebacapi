@@ -129,3 +129,17 @@ exports.cambiarEstadoVenta = async (req, res, next) => {
     next(err);
   }
 };
+
+// Controlador para ver mis compras
+exports.verMisCompras = async (req, res, next) => {
+  try {
+    const { id_persona } = req.params;
+    const compras = await booksService.verMisCompras(id_persona);
+    sendResponse(res, { 
+      data: compras, 
+      message: 'Mis compras obtenidas exitosamente' 
+    });
+  } catch (err) {
+    next(err);
+  }
+};
