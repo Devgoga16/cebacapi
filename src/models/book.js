@@ -25,6 +25,15 @@ const BookSchema = new mongoose.Schema({
     type: Number, 
     default: 0,
     min: 0
+  },
+  image: {
+    id: { type: String }, // ID de la imagen en Chevereto
+    url: { type: String }, // URL completa de la imagen
+    display_url: { type: String }, // URL de visualización
+    thumb_url: { type: String }, // URL del thumbnail
+    medium_url: { type: String }, // URL tamaño medio
+    original_filename: { type: String }, // Nombre original del archivo
+    upload_date: { type: Date } // Fecha de subida
   }
 }, {
   collection: 'books',

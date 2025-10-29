@@ -4,7 +4,13 @@ const { sendResponse } = require('../utils/helpers');
 // 1) Controlador para agregar un libro
 exports.crearLibro = async (req, res, next) => {
   try {
-    const libro = await booksService.crearLibro(req.body);
+    // Combinar datos del body con el archivo de imagen si existe
+    const data = { 
+      ...req.body,
+      imageFile: req.file // Si se usa multer
+    };
+    
+    const libro = await booksService.crearLibro(data);
     sendResponse(res, { 
       data: libro, 
       message: 'Libro creado exitosamente', 
@@ -138,6 +144,56 @@ exports.verMisCompras = async (req, res, next) => {
     sendResponse(res, { 
       data: compras, 
       message: 'Mis compras obtenidas exitosamente' 
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Controladores para manejo de imágenes de libros
+
+// Actualizar imagen de un libro
+exports.actualizarImagenLibro = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const imageData = {
+      imageFile: req.file,
+      imageBase64: req.body.imageBase64,
+      imageUrl: req.body.imageUrl
+    };
+    
+    const libro = await booksService.actualizarImagenLibro(id, imageData);
+    sendResponse(res, { 
+      data: libro, 
+      message: 'Imagen del libro actualizada exitosamente' 
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Eliminar imagen de un libro
+exports.eliminarImagenLibro = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const libro = await booksService.eliminarImagenLibro(id);
+    sendResponse(res, { 
+      data: libro, 
+      message: 'Imagen del libro eliminada exitosamente' 
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Obtener información de imagen de un libro
+exports.obtenerImagenLibro = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await booksService.obtenerImagenLibro(id);
+    sendResponse(res, { 
+      data: result, 
+      message: 'Información de imagen obtenida exitosamente' 
     });
   } catch (err) {
     next(err);
