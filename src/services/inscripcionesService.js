@@ -89,7 +89,7 @@ exports.getAulasDisponiblesParaInscripcion = async (id_persona) => {
   let cursosLlevados = new Set();
   let cursosAprobados = new Set();
   if (id_persona) {
-    const regs = await AulaAlumno.find({ id_alumno: id_persona, estado: { $in: ['aprobado', 'en curso', 'inscrito'] } })
+    const regs = await AulaAlumno.find({ id_alumno: id_persona, estado: { $in: ['aprobado', 'en curso', 'inscrito', 'pendiente'] } })
       .select('id_aula estado')
       .populate({ path: 'id_aula', select: 'id_curso' })
       .lean();
@@ -121,6 +121,14 @@ exports.getAulasDisponiblesParaInscripcion = async (id_persona) => {
     .populate({ path: 'id_profesor', select: '-imagen' })
     .populate('id_ciclo')
     .lean();
+
+  // Obtener conteo de inscritos por aula
+  const aulaIdsDelCiclo = aulas.map(a => a._id);
+  const conteosInscritos = await AulaAlumno.aggregate([
+    { $match: { id_aula: { $in: aulaIdsDelCiclo }, estado: "inscrito" } },
+    { $group: { _id: "$id_aula", count: { $sum: 1 } } }
+  ]);
+  const conteoMap = new Map(conteosInscritos.map(c => [String(c._id), c.count]));
 
   // 2) Obtener cursos para los que ya existe una Inscripción del alumno en este ciclo (Pendiente o Aceptado)
   let cursosConInscripcion = new Set();
@@ -204,6 +212,7 @@ exports.getAulasDisponiblesParaInscripcion = async (id_persona) => {
       nivelGroup._cursosMap.set(cursoId, { curso: curso || null, aulas: [] });
       nivelGroup.cursos.push(nivelGroup._cursosMap.get(cursoId));
     }
+    aula.inscritos = conteoMap.get(String(aula._id)) || 0;
     nivelGroup._cursosMap.get(cursoId).aulas.push(aula);
   }
 

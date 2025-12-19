@@ -1,4 +1,5 @@
 const AulaAlumno = require('../models/aulaalumno');
+const Aula = require('../models/aula');
 const { compressBase64Image } = require('../utils/image');
 
 exports.getAllAulaAlumnos = async () => {
@@ -121,6 +122,33 @@ exports.bulkCreateAulaAlumnos = async (id_alumno, id_aulas, additionalData = {})
 
   const toInsertIds = requestedIds.filter(id => !existentesSet.has(id));
 
+  // Verificar si los cursos requieren carta_pastoral
+  const aulasConCursos = await Aula.find({ _id: { $in: toInsertIds } })
+    .populate('id_curso', 'carta_pastoral nombre_curso') // Poblar solo los campos necesarios
+    .lean();
+
+  for (let index = 0; index < toInsertIds.length; index++) {
+    const aula = aulasConCursos.find(a => String(a._id) === toInsertIds[index]);
+    if (!aula) continue; // Si no se encuentra el aula, saltar (aunque debería existir)
+
+    const requiereCartaPastoral = aula.id_curso?.carta_pastoral === true;
+    if (requiereCartaPastoral) {
+      // Verificar si carta_pastoral está proporcionada para este índice
+      let cartaPastoralProporcionada = false;
+      if (Array.isArray(additionalData.carta_pastoral)) {
+        cartaPastoralProporcionada = !!additionalData.carta_pastoral[index];
+      } else {
+        cartaPastoralProporcionada = !!additionalData.carta_pastoral;
+      }
+
+      if (!cartaPastoralProporcionada) {
+        const err = new Error(`El curso "${aula.id_curso.nombre_curso}" requiere carta_pastoral, pero no se proporcionó para el aula ${toInsertIds[index]}.`);
+        err.statusCode = 400;
+        throw err;
+      }
+    }
+  }
+
   // Preparar documentos con carta_pastoral específica por aula
   // carta_pastoral puede ser:
   // - Objeto único: aplicado a todos los registros
@@ -128,7 +156,9 @@ exports.bulkCreateAulaAlumnos = async (id_alumno, id_aulas, additionalData = {})
   const docs = [];
   for (let index = 0; index < toInsertIds.length; index++) {
     const id_aula = toInsertIds[index];
-    const doc = { id_aula, id_alumno, estado: 'pendiente' };
+    const aula = aulasConCursos.find(a => String(a._id) === id_aula);
+    const requiereCartaPastoral = aula?.id_curso?.carta_pastoral === true;
+    const doc = { id_aula, id_alumno, estado: requiereCartaPastoral ? 'pendiente' : 'inscrito' };
 
     // Procesar carta_pastoral si existe
     if (additionalData.carta_pastoral) {
