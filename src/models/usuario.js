@@ -18,6 +18,12 @@ const UsuarioSchema = new mongoose.Schema(
         ref: "Rol", // el nombre del modelo de tu colección roles
       },
     ],
+    permissions: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
     active: {
       type: Boolean,
       default: true,

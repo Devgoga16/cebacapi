@@ -30,6 +30,7 @@ exports.login = async (username, password) => {
       _id: usuario._id,
       username: usuario.username,
       roles: usuario.roles,
+      permissions: usuario.permissions || [],
     },
     persona,
     roles,

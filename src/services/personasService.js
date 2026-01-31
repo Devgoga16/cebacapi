@@ -15,7 +15,9 @@ exports.getAllPersonas = async () => {
     .populate({
       path: 'id_ministerio',
       populate: { path: 'id_iglesia' }
-    });
+    })
+    // Ordenar alfabéticamente por apellidos y nombres
+    .sort({ apellido_paterno: 1, apellido_materno: 1, nombres: 1 });
 };
 
 exports.getPersonasByRol = async (nombreRol) => {

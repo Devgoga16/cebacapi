@@ -83,15 +83,34 @@ exports.createUsuario = async (data) => {
       throw err;
     }
 
-  // Incluir rol por defecto "estudiante"
-  const rolEstudiante = await Rol.findOne({ nombre_rol: { $regex: /^estudiante$/i } });
-  if (!rolEstudiante) {
-    const err = new Error("No se encontró el rol por defecto 'estudiante'");
-    err.statusCode = 400;
-    throw err;
+  // Si no se envían roles, usar rol por defecto "estudiante"
+  if (!userData.roles || userData.roles.length === 0) {
+    const rolEstudiante = await Rol.findOne({ nombre_rol: { $regex: /^estudiante$/i } });
+    if (!rolEstudiante) {
+      const err = new Error("No se encontró el rol por defecto 'estudiante'");
+      err.statusCode = 400;
+      throw err;
+    }
+    userData.roles = [rolEstudiante._id];
   }
-  // Forzamos rol por defecto y no aceptamos roles del payload para este endpoint
-  userData.roles = [rolEstudiante._id];
+
+  // Validar que solo roles Admin puedan tener permissions
+  if (userData.permissions && userData.permissions.length > 0) {
+    // Obtener los roles enviados para verificar si incluye Admin
+    const rolesEnviados = await Rol.find({ _id: { $in: userData.roles } });
+    const esAdmin = rolesEnviados.some(rol => 
+      rol.nombre_rol && rol.nombre_rol.toLowerCase() === 'admin'
+    );
+    
+    if (!esAdmin) {
+      const err = new Error('Solo usuarios con rol Admin pueden tener permissions configurados');
+      err.statusCode = 403;
+      throw err;
+    }
+  } else {
+    // Si no se envían permissions, asignar array vacío
+    userData.permissions = [];
+  }
 
   // Si se proporcionó id_persona, validar que exista y que no tenga ya un usuario asignado
   let personaEmail = null;
@@ -138,6 +157,33 @@ exports.updateUsuario = async (id, data) => {
     const salt = await bcrypt.genSalt(10);
     data.password = await bcrypt.hash(data.password, salt);
   }
+
+  // Si se están actualizando permissions, validar que el usuario tenga rol Admin
+  if (data.permissions && data.permissions.length > 0) {
+    // Obtener el usuario actual
+    const usuarioActual = await Usuario.findById(id);
+    if (!usuarioActual) {
+      const err = new Error('Usuario no encontrado');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    // Determinar los roles finales (si se están actualizando o usar los actuales)
+    const rolesFinal = data.roles || usuarioActual.roles;
+    
+    // Verificar si alguno de los roles es Admin
+    const rolesDoc = await Rol.find({ _id: { $in: rolesFinal } });
+    const esAdmin = rolesDoc.some(rol => 
+      rol.nombre_rol && rol.nombre_rol.toLowerCase() === 'admin'
+    );
+    
+    if (!esAdmin) {
+      const err = new Error('Solo usuarios con rol Admin pueden tener permissions configurados');
+      err.statusCode = 403;
+      throw err;
+    }
+  }
+
   return await Usuario.findByIdAndUpdate(id, data, { new: true });
 };
 
