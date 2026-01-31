@@ -64,7 +64,24 @@ exports.listarTodosLibros = async (req, res, next) => {
 // 4) Controlador para comprar libros
 exports.comprarLibros = async (req, res, next) => {
   try {
-    const venta = await booksService.comprarLibros(req.body);
+    const body = { ...req.body };
+
+    if (typeof body.books === 'string') {
+      try {
+        body.books = JSON.parse(body.books);
+      } catch (parseErr) {
+        const err = new Error('El campo books debe ser un JSON válido');
+        err.statusCode = 400;
+        throw err;
+      }
+    }
+
+    const data = {
+      ...body,
+      voucherFile: req.file
+    };
+
+    const venta = await booksService.comprarLibros(data);
     sendResponse(res, { 
       data: venta, 
       message: 'Compra realizada exitosamente', 
@@ -144,6 +161,31 @@ exports.verMisCompras = async (req, res, next) => {
     sendResponse(res, { 
       data: compras, 
       message: 'Mis compras obtenidas exitosamente' 
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Controlador para validar voucher
+exports.validarVoucher = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { action, validated_by, rejection_reason } = req.body;
+    
+    const venta = await booksService.validarVoucher(id, { 
+      action, 
+      validated_by, 
+      rejection_reason 
+    });
+    
+    const message = action === 'aprobar' 
+      ? 'Voucher aprobado exitosamente' 
+      : 'Voucher rechazado exitosamente';
+    
+    sendResponse(res, { 
+      data: venta, 
+      message 
     });
   } catch (err) {
     next(err);

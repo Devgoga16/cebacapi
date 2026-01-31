@@ -32,6 +32,31 @@ const SaleSchema = new mongoose.Schema({
     required: true,
     min: 0
   },
+  paymentMethod: {
+    type: String,
+    enum: ["efectivo", "transferencia", "yape"],
+    required: true
+  },
+  voucher: {
+    id: { type: String },
+    url: { type: String },
+    display_url: { type: String },
+    thumb_url: { type: String },
+    medium_url: { type: String },
+    original_filename: { type: String },
+    upload_date: { type: Date },
+    validation_status: {
+      type: String,
+      enum: ["pendiente", "aprobado", "rechazado"],
+      default: "pendiente"
+    },
+    validated_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Persona"
+    },
+    validated_at: { type: Date },
+    rejection_reason: { type: String, trim: true }
+  },
   saleDate: { 
     type: Date, 
     default: Date.now 

@@ -95,10 +95,25 @@ exports.listarTodosLibros = async () => {
 
 // 4) Servicio para comprar uno o más libros
 exports.comprarLibros = async (data) => {
-  const { buyer, books } = data;
+  const { buyer, books, paymentMethod, voucherFile, voucherBase64, voucherUrl } = data;
 
   if (!books || !Array.isArray(books) || books.length === 0) {
     const err = new Error('Debe especificar al menos un libro');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const validMethods = ['efectivo', 'transferencia', 'yape'];
+  if (!paymentMethod || !validMethods.includes(paymentMethod)) {
+    const err = new Error('paymentMethod debe ser: efectivo, transferencia o yape');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const requiereVoucher = paymentMethod === 'transferencia' || paymentMethod === 'yape';
+  const tieneVoucher = Boolean(voucherFile || voucherBase64 || voucherUrl);
+  if (requiereVoucher && !tieneVoucher) {
+    const err = new Error('Debe adjuntar voucher cuando el pago es transferencia o yape');
     err.statusCode = 400;
     throw err;
   }
@@ -131,20 +146,149 @@ exports.comprarLibros = async (data) => {
     });
   }
 
-  // Crear la venta
+  let voucherData = null;
+  if (tieneVoucher) {
+    try {
+      let imageResult;
+
+      if (voucherFile) {
+        if (!imageUploadService.isValidImageFormat(voucherFile.originalname)) {
+          const err = new Error('Formato de voucher no válido. Use JPG, PNG, GIF, WEBP o BMP');
+          err.statusCode = 400;
+          throw err;
+        }
+        if (!imageUploadService.isValidFileSize(voucherFile.size)) {
+          const err = new Error('El voucher es demasiado grande. Máximo 10MB');
+          err.statusCode = 400;
+          throw err;
+        }
+        imageResult = await imageUploadService.uploadFromBuffer(
+          voucherFile.buffer,
+          voucherFile.originalname
+        );
+      } else if (voucherBase64) {
+        imageResult = await imageUploadService.uploadFromBase64(
+          voucherBase64,
+          `voucher_${Date.now()}.jpg`
+        );
+      } else if (voucherUrl) {
+        imageResult = await imageUploadService.uploadFromUrl(voucherUrl);
+      }
+
+      if (imageResult && imageResult.success) {
+        voucherData = {
+          id: imageResult.id,
+          url: imageResult.url,
+          display_url: imageResult.display_url,
+          thumb_url: imageResult.thumb?.url,
+          medium_url: imageResult.medium?.url,
+          original_filename: imageResult.original_filename,
+          upload_date: imageResult.upload_date
+        };
+      }
+    } catch (imageError) {
+      const err = new Error(imageError.message || 'Error al subir voucher');
+      err.statusCode = imageError.statusCode || 500;
+      throw err;
+    }
+  }
+
+  // Crear la venta (siempre como reservado, sin bajar stock aún)
   const venta = new Sale({
     buyer,
     books: librosValidados,
     total,
+    paymentMethod,
+    voucher: voucherData || undefined,
     status: 'reservado'
   });
 
-  // Reducir stock de los libros
-  for (const item of books) {
-    await Book.findByIdAndUpdate(
-      item.book,
-      { $inc: { stock: -item.quantity } }
-    );
+  return await venta.save();
+};
+
+// Servicio para aprobar o rechazar voucher
+exports.validarVoucher = async (id_venta, { action, validated_by, rejection_reason }) => {
+  const validActions = ['aprobar', 'rechazar'];
+  if (!action || !validActions.includes(action)) {
+    const err = new Error('action debe ser: aprobar o rechazar');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (!validated_by) {
+    const err = new Error('validated_by es requerido');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (action === 'rechazar' && !rejection_reason) {
+    const err = new Error('rejection_reason es requerido al rechazar');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const venta = await Sale.findById(id_venta)
+    .populate('buyer', 'nombres apellido_paterno apellido_materno')
+    .populate('books.book');
+
+  if (!venta) {
+    const err = new Error('Venta no encontrada');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const paymentMethod = venta.paymentMethod;
+  if (paymentMethod === 'efectivo') {
+    const err = new Error('Las ventas en efectivo no requieren validación de voucher');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (!venta.voucher || !venta.voucher.url) {
+    const err = new Error('Esta venta no tiene voucher adjunto');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const currentStatus = venta.voucher.validation_status || 'pendiente';
+  if (currentStatus !== 'pendiente') {
+    const err = new Error(`El voucher ya fue ${currentStatus}`);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  venta.voucher.validation_status = action === 'aprobar' ? 'aprobado' : 'rechazado';
+  venta.voucher.validated_by = validated_by;
+  venta.voucher.validated_at = new Date();
+  
+  if (action === 'rechazar') {
+    venta.voucher.rejection_reason = rejection_reason;
+    // Si se rechaza, cambiar estado de venta a reservado
+    venta.status = 'reservado';
+  } else {
+    // Si se aprueba, cambiar estado a pagado y bajar stock (transferencia/yape)
+    venta.status = 'pagado';
+    
+    // Bajar stock para pagos no efectivo
+    for (const item of venta.books) {
+      const libro = await Book.findById(item.book);
+      if (!libro) {
+        const err = new Error(`Libro con ID ${item.book} no encontrado`);
+        err.statusCode = 404;
+        throw err;
+      }
+      
+      if (libro.stock < item.quantity) {
+        const err = new Error(`Stock insuficiente para "${libro.title}". Disponible: ${libro.stock}, Requerido: ${item.quantity}`);
+        err.statusCode = 400;
+        throw err;
+      }
+      
+      await Book.findByIdAndUpdate(
+        item.book,
+        { $inc: { stock: -item.quantity } }
+      );
+    }
   }
 
   return await venta.save();
@@ -164,6 +308,31 @@ exports.entregarLibros = async (id_venta, deliveredBy) => {
     const err = new Error('Esta venta ya fue entregada');
     err.statusCode = 400;
     throw err;
+  }
+
+  // Si es pago en efectivo, bajar stock al momento de entregar
+  if (venta.paymentMethod === 'efectivo') {
+    for (const item of venta.books) {
+      const libro = await Book.findById(item.book);
+      if (!libro) {
+        const err = new Error(`Libro con ID ${item.book} no encontrado`);
+        err.statusCode = 404;
+        throw err;
+      }
+      
+      if (libro.stock < item.quantity) {
+        const err = new Error(`Stock insuficiente para "${libro.title}". Disponible: ${libro.stock}, Requerido: ${item.quantity}`);
+        err.statusCode = 400;
+        throw err;
+      }
+      
+      await Book.findByIdAndUpdate(
+        item.book,
+        { $inc: { stock: -item.quantity } }
+      );
+    }
+    // Marcar como pagado al entregar en efectivo
+    venta.status = 'pagado';
   }
 
   venta.status = 'entregado';

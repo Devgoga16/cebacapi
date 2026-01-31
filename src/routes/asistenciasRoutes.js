@@ -174,4 +174,99 @@ router.post('/asistencias/tomar', asistenciasController.tomarAsistencia);
  */
 router.get('/asistencias/aula/:id_aula', asistenciasController.getAsistenciasDeAulaPorFecha);
 
+/**
+ * @swagger
+ * /asistencias/aula/{id_aula}/alumno/{id_alumno}:
+ *   get:
+ *     summary: Obtiene el resumen y detalle de asistencia de un alumno en un aula
+ *     tags: [Asistencias]
+ *     parameters:
+ *       - in: path
+ *         name: id_aula
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID del aula
+ *       - in: path
+ *         name: id_alumno
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID del alumno
+ *       - in: query
+ *         name: desde
+ *         schema:
+ *           type: string
+ *           format: date
+ *         required: false
+ *         description: Fecha inicio (YYYY-MM-DD)
+ *       - in: query
+ *         name: hasta
+ *         schema:
+ *           type: string
+ *           format: date
+ *         required: false
+ *         description: Fecha fin (YYYY-MM-DD)
+ *     responses:
+ *       200:
+ *         description: Resumen y detalle de asistencia del alumno
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     aula:
+ *                       type: object
+ *                     alumno:
+ *                       type: object
+ *                     rango:
+ *                       type: object
+ *                       properties:
+ *                         desde:
+ *                           type: string
+ *                           format: date
+ *                           nullable: true
+ *                         hasta:
+ *                           type: string
+ *                           format: date
+ *                           nullable: true
+ *                     resumen:
+ *                       type: object
+ *                       properties:
+ *                         presente:
+ *                           type: integer
+ *                         ausente:
+ *                           type: integer
+ *                         tarde:
+ *                           type: integer
+ *                         justificado:
+ *                           type: integer
+ *                         total_registros:
+ *                           type: integer
+ *                         porcentaje_presente:
+ *                           type: number
+ *                         porcentaje_efectivo:
+ *                           type: number
+ *                     detalle:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           fecha:
+ *                             type: string
+ *                             format: date
+ *                           estado:
+ *                             type: string
+ *                           observacion:
+ *                             type: string
+ *                           tomado_por:
+ *                             type: object
+ */
+router.get('/asistencias/aula/:id_aula/alumno/:id_alumno', asistenciasController.getResumenDetalleAsistenciaAlumno);
+
 module.exports = router;

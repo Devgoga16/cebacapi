@@ -108,6 +108,29 @@ const upload = multer({
  *         total:
  *           type: number
  *           description: Total de la venta
+ *         paymentMethod:
+ *           type: string
+ *           enum: [efectivo, transferencia, yape]
+ *           description: Método de pago
+ *         voucher:
+ *           type: object
+ *           description: Voucher de pago (si aplica)
+ *           properties:
+ *             id:
+ *               type: string
+ *             url:
+ *               type: string
+ *             display_url:
+ *               type: string
+ *             thumb_url:
+ *               type: string
+ *             medium_url:
+ *               type: string
+ *             original_filename:
+ *               type: string
+ *             upload_date:
+ *               type: string
+ *               format: date-time
  *         status:
  *           type: string
  *           enum: [reservado, pagado, entregado]
@@ -266,10 +289,21 @@ router.put('/books/:id/stock', booksController.agregarStock);
  *             required:
  *               - buyer
  *               - books
+ *               - paymentMethod
  *             properties:
  *               buyer:
  *                 type: string
  *                 description: ID de la persona que compra
+ *               paymentMethod:
+ *                 type: string
+ *                 enum: [efectivo, transferencia, yape]
+ *                 description: Método de pago
+ *               voucherBase64:
+ *                 type: string
+ *                 description: Voucher en base64 (requerido para transferencia o yape)
+ *               voucherUrl:
+ *                 type: string
+ *                 description: URL del voucher (requerido para transferencia o yape)
  *               books:
  *                 type: array
  *                 items:
@@ -285,11 +319,31 @@ router.put('/books/:id/stock', booksController.agregarStock);
  *                       type: number
  *                       minimum: 1
  *                       description: Cantidad a comprar
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - buyer
+ *               - books
+ *               - paymentMethod
+ *             properties:
+ *               buyer:
+ *                 type: string
+ *               paymentMethod:
+ *                 type: string
+ *                 enum: [efectivo, transferencia, yape]
+ *               books:
+ *                 type: string
+ *                 description: JSON string con items (book, quantity)
+ *               voucher:
+ *                 type: string
+ *                 format: binary
+ *                 description: Voucher (requerido para transferencia o yape)
  *     responses:
  *       201:
  *         description: Compra realizada exitosamente
  */
-router.post('/books/buy', booksController.comprarLibros);
+router.post('/books/buy', upload.single('voucher'), booksController.comprarLibros);
 
 /**
  * @swagger
@@ -430,6 +484,60 @@ router.put('/books/sales/:id/status', booksController.cambiarEstadoVenta);
  *                   type: integer
  */
 router.get('/books/my-purchases/:id_persona', booksController.verMisCompras);
+
+/**
+ * @swagger
+ * /books/sales/{id}/validate-voucher:
+ *   put:
+ *     summary: Aprobar o rechazar voucher de pago
+ *     tags: [Books]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de la venta
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - action
+ *               - validated_by
+ *             properties:
+ *               action:
+ *                 type: string
+ *                 enum: [aprobar, rechazar]
+ *                 description: Acción a realizar con el voucher
+ *               validated_by:
+ *                 type: string
+ *                 description: ID de la persona que valida
+ *               rejection_reason:
+ *                 type: string
+ *                 description: Motivo de rechazo (requerido si action es rechazar)
+ *     responses:
+ *       200:
+ *         description: Voucher validado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/Sale'
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Error de validación
+ *       404:
+ *         description: Venta no encontrada
+ */
+router.put('/books/sales/:id/validate-voucher', booksController.validarVoucher);
 
 /**
  * @swagger
