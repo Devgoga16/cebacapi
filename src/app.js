@@ -27,6 +27,7 @@ const imageRoutes = require('./routes/imageRoutes');
 const tiposCalificacionRoutes = require('./routes/tiposCalificacionRoutes');
 const calificacionesRoutes = require('./routes/calificacionesRoutes');
 const anunciosProfesorRoutes = require('./routes/anunciosProfesorRoutes');
+const alumnosRoutes = require('./routes/alumnosRoutes');
 
 const app = express();
 app.use(cors());
@@ -76,6 +77,7 @@ app.use('/images', imageRoutes);
 app.use('/tipos-calificacion', tiposCalificacionRoutes);
 app.use('/calificaciones', calificacionesRoutes);
 app.use('/anuncios-profesor', anunciosProfesorRoutes);
+app.use('/alumnos', alumnosRoutes);
 
 // Rutas también bajo prefijo /api
 app.use('/api', rolesRoutes);
@@ -101,6 +103,7 @@ app.use('/api/images', imageRoutes);
 app.use('/api/tipos-calificacion', tiposCalificacionRoutes);
 app.use('/api/calificaciones', calificacionesRoutes);
 app.use('/api/anuncios-profesor', anunciosProfesorRoutes);
+app.use('/api/alumnos', alumnosRoutes);
 
 // Middleware de manejo de errores
 app.use(errorHandler);

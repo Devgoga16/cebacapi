@@ -11,6 +11,7 @@ const PersonaSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      set: (v) => (typeof v === 'string' ? v.toUpperCase() : v),
     },
     email: {
       type: String,
@@ -22,9 +23,17 @@ const PersonaSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      set: (v) => (typeof v === 'string' ? v.toUpperCase() : v),
     },
     apellido_materno: {
       type: String,
+      required: true,
+      trim: true,
+      set: (v) => (typeof v === 'string' ? v.toUpperCase() : v),
+    },
+    genero: {
+      type: String,
+      enum: ['M', 'F'],
       required: true,
       trim: true,
     },

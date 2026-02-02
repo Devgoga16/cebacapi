@@ -1,5 +1,11 @@
 const Persona = require('../models/persona');
 const { compressBase64Image } = require('../utils/image');
+function normalizePersonaNames(data = {}) {
+  if (typeof data.nombres === 'string') data.nombres = data.nombres.toUpperCase();
+  if (typeof data.apellido_paterno === 'string') data.apellido_paterno = data.apellido_paterno.toUpperCase();
+  if (typeof data.apellido_materno === 'string') data.apellido_materno = data.apellido_materno.toUpperCase();
+  return data;
+}
 function escapeRegExp(str = '') {
   return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -72,6 +78,7 @@ exports.getPersonaById = async (id) => {
 };
 
 exports.createPersona = async (data) => {
+  normalizePersonaNames(data);
   // Si viene una imagen base64, comprimimos antes de guardar
   if (data && data.imagen && data.imagen.data) {
     try {
@@ -89,6 +96,7 @@ exports.createPersona = async (data) => {
 };
 
 exports.updatePersona = async (id, data) => {
+  normalizePersonaNames(data);
   // Comprimir si viene nueva imagen
   if (data && data.imagen && data.imagen.data) {
     try {
@@ -100,7 +108,7 @@ exports.updatePersona = async (id, data) => {
       console.error('Fallo al comprimir imagen en updatePersona:', e?.message || e);
     }
   }
-  return await Persona.findByIdAndUpdate(id, data, { new: true })
+  return await Persona.findByIdAndUpdate(id, data, { new: true, runValidators: true })
     .populate({
       path: 'id_user',
       populate: { path: 'roles' }

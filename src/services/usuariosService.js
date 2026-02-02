@@ -37,6 +37,13 @@ const Rol = require('../models/rol');
 const bcrypt = require('bcrypt');
 const axios = require('axios');
 
+function normalizePersonaNames(data = {}) {
+  if (typeof data.nombres === 'string') data.nombres = data.nombres.toUpperCase();
+  if (typeof data.apellido_paterno === 'string') data.apellido_paterno = data.apellido_paterno.toUpperCase();
+  if (typeof data.apellido_materno === 'string') data.apellido_materno = data.apellido_materno.toUpperCase();
+  return data;
+}
+
 // Helper: envía correo de validación (no bloqueante: errores se registran y no rompen la creación)
 async function sendValidationEmail(to, iduser) {
   if (!to || !iduser) return;
@@ -235,7 +242,7 @@ exports.createUsuarioYPersona = async (payload) => {
   try {
     // 2) Crear Persona con id_user ya asignado
     const PersonaModel = require('../models/persona');
-    const personaData = { ...personaInput, id_user: createdUsuario._id };
+    const personaData = normalizePersonaNames({ ...personaInput, id_user: createdUsuario._id });
     const personaDoc = new PersonaModel(personaData);
   const createdPersona = await personaDoc.save();
 
