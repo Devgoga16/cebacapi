@@ -4,8 +4,18 @@ const Aula = require('../models/aula');
 const Persona = require('../models/persona');
 
 function normalizeToLocalDayUTC(dateInput) {
-  const now = dateInput ? new Date(dateInput) : new Date();
-  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  if (!dateInput) {
+    const now = new Date();
+    return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  }
+  // Si dateInput es string en formato YYYY-MM-DD, parsearlo directamente en UTC
+  if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateInput)) {
+    const [year, month, day] = dateInput.split('T')[0].split('-').map(Number);
+    return new Date(Date.UTC(year, month - 1, day));
+  }
+  // Si es Date object, usar UTC del date object
+  const d = new Date(dateInput);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 }
 
 // Devuelve la lista base de alumnos de un aula para tomar asistencia en una fecha: incluye estado previo si existe

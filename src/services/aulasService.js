@@ -5,8 +5,18 @@ const Asistencia = require('../models/asistencia');
 const mongoose = require('mongoose');
 
 function normalizeToLocalDayUTC(dateInput) {
-  const now = dateInput ? new Date(dateInput) : new Date();
-  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  if (!dateInput) {
+    const now = new Date();
+    return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  }
+  // Si dateInput es string en formato YYYY-MM-DD, parsearlo directamente en UTC
+  if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateInput)) {
+    const [year, month, day] = dateInput.split('T')[0].split('-').map(Number);
+    return new Date(Date.UTC(year, month - 1, day));
+  }
+  // Si es Date object, usar UTC del date object
+  const d = new Date(dateInput);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 }
 
 exports.getAllAulas = async () => {
@@ -550,5 +560,164 @@ exports.getAdminResumenAsistenciaAula = async (idAula, { desde, hasta } = {}) =>
     resumen_general: resumenGeneral,
     alumnos,
     timeline,
+  };
+};
+
+// Datos para reporte Excel de asistencia por aula (rango de fechas)
+// Output:
+// {
+//   aula,
+//   rango: { desde, hasta },
+//   fechas: [Date],
+//   sesiones_tomadas,
+//   alumnos: [ { id_alumno, alumno, estado_aula } ],
+//   asistencias: [ { id_alumno, alumno, fecha, estado, observacion, tomado_por } ],
+//   resumen_general: { presente, ausente, tarde, justificado, total_registros },
+//   resumen_por_alumno: [ { id_alumno, alumno, totales } ]
+// }
+exports.getReporteExcelAula = async (idAula, { desde, hasta } = {}) => {
+  if (!idAula) {
+    const err = new Error('idAula es requerido');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const aula = await Aula.findById(idAula)
+    .populate([
+      { path: 'id_curso', populate: { path: 'id_nivel' } },
+      { path: 'id_ciclo' },
+      { path: 'id_profesor', select: '-imagen' },
+    ])
+    .lean();
+
+  if (!aula) {
+    const err = new Error('Aula no encontrada');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const hoy = normalizeToLocalDayUTC();
+  const defDesde = aula.fecha_inicio ? normalizeToLocalDayUTC(aula.fecha_inicio) : hoy;
+  const defHastaRaw = aula.fecha_fin ? normalizeToLocalDayUTC(aula.fecha_fin) : hoy;
+  const hastaFinal = defHastaRaw > hoy ? hoy : defHastaRaw;
+
+  const desdeFecha = desde ? normalizeToLocalDayUTC(desde) : defDesde;
+  const hastaFecha = hasta ? normalizeToLocalDayUTC(hasta) : hastaFinal;
+
+  if (desdeFecha > hastaFecha) {
+    const err = new Error('El rango de fechas es inválido: desde > hasta');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const aulaAlumnos = await AulaAlumno.find({ id_aula: idAula })
+    .populate({
+      path: 'id_alumno',
+      select: 'nombres apellido_paterno apellido_materno numero_documento',
+    })
+    .lean();
+
+  const alumnoIds = aulaAlumnos
+    .map((aa) => aa.id_alumno?._id || aa.id_alumno)
+    .filter(Boolean)
+    .map((x) => String(x));
+
+  if (alumnoIds.length === 0) {
+    return {
+      aula,
+      rango: { desde: desdeFecha, hasta: hastaFecha },
+      fechas: [],
+      sesiones_tomadas: 0,
+      alumnos: [],
+      asistencias: [],
+      resumen_general: { presente: 0, ausente: 0, tarde: 0, justificado: 0, total_registros: 0 },
+      resumen_por_alumno: [],
+    };
+  }
+
+  // Convertir IDs a ObjectIds para la query
+  const alumnoObjIds = alumnoIds.map((id) => new mongoose.Types.ObjectId(id));
+
+  const asistencias = await Asistencia.find({
+    id_aula: new mongoose.Types.ObjectId(String(idAula)),
+    id_alumno: { $in: alumnoObjIds },
+    fecha: { $gte: desdeFecha, $lte: hastaFecha },
+  })
+    .populate({ path: 'id_alumno', select: 'nombres apellido_paterno apellido_materno numero_documento' })
+    .populate({ path: 'tomado_por', select: 'nombres apellido_paterno apellido_materno numero_documento' })
+    .lean();
+
+  const fechasSet = new Set();
+  const resumenGeneral = { presente: 0, ausente: 0, tarde: 0, justificado: 0, total_registros: 0 };
+  const resumenPorAlumnoMap = new Map();
+
+  for (const aa of aulaAlumnos) {
+    const id = String(aa.id_alumno?._id || aa.id_alumno);
+    resumenPorAlumnoMap.set(id, { presente: 0, ausente: 0, tarde: 0, justificado: 0, total_registros: 0 });
+  }
+
+  const asistenciasFlat = asistencias.map((a) => {
+    const fechaKey = new Date(a.fecha).toISOString();
+    fechasSet.add(fechaKey);
+    if (a.estado in resumenGeneral) resumenGeneral[a.estado] += 1;
+    resumenGeneral.total_registros += 1;
+
+    const idAlumno = String(a.id_alumno?._id || a.id_alumno);
+    const tot = resumenPorAlumnoMap.get(idAlumno);
+    if (tot && a.estado in tot) {
+      tot[a.estado] += 1;
+      tot.total_registros += 1;
+    }
+
+    return {
+      id_alumno: idAlumno,
+      alumno: a.id_alumno || null,
+      fecha: a.fecha,
+      estado: a.estado,
+      observacion: a.observacion || '',
+      tomado_por: a.tomado_por || null,
+    };
+  });
+
+  const fechas = Array.from(fechasSet)
+    .map((f) => new Date(f))
+    .sort((a, b) => a - b);
+
+  const alumnos = aulaAlumnos
+    .map((aa) => ({
+      id_alumno: String(aa.id_alumno?._id || aa.id_alumno),
+      alumno: aa.id_alumno || null,
+      estado_aula: aa.estado || null,
+    }))
+    .sort((a, b) => {
+      const ap = (a.alumno?.apellido_paterno || '').toLowerCase();
+      const bp = (b.alumno?.apellido_paterno || '').toLowerCase();
+      if (ap !== bp) return ap.localeCompare(bp);
+      const am = (a.alumno?.apellido_materno || '').toLowerCase();
+      const bm = (b.alumno?.apellido_materno || '').toLowerCase();
+      if (am !== bm) return am.localeCompare(bm);
+      const an = (a.alumno?.nombres || '').toLowerCase();
+      const bn = (b.alumno?.nombres || '').toLowerCase();
+      if (an !== bn) return an.localeCompare(bn);
+      const ad = (a.alumno?.numero_documento || '').toLowerCase();
+      const bd = (b.alumno?.numero_documento || '').toLowerCase();
+      return ad.localeCompare(bd);
+    });
+
+  const resumenPorAlumno = alumnos.map((a) => ({
+    id_alumno: a.id_alumno,
+    alumno: a.alumno,
+    totales: resumenPorAlumnoMap.get(a.id_alumno) || { presente: 0, ausente: 0, tarde: 0, justificado: 0, total_registros: 0 },
+  }));
+
+  return {
+    aula,
+    rango: { desde: desdeFecha, hasta: hastaFecha },
+    fechas,
+    sesiones_tomadas: fechas.length,
+    alumnos,
+    asistencias: asistenciasFlat,
+    resumen_general: resumenGeneral,
+    resumen_por_alumno: resumenPorAlumno,
   };
 };

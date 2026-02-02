@@ -450,6 +450,77 @@ router.get('/aulas/:id/admin-resumen-asistencia', aulasController.getAdminResume
 
 /**
  * @swagger
+ * /aulas/{id}/reporte-excel:
+ *   get:
+ *     summary: Datos para armar reporte Excel de asistencia del aula (rango de fechas)
+ *     tags: [Aulas]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID del aula
+ *       - in: query
+ *         name: desde
+ *         schema:
+ *           type: string
+ *           format: date
+ *         required: false
+ *         description: Fecha inicio (YYYY-MM-DD). Por defecto, fecha_inicio del aula u hoy.
+ *       - in: query
+ *         name: hasta
+ *         schema:
+ *           type: string
+ *           format: date
+ *         required: false
+ *         description: Fecha fin (YYYY-MM-DD). Por defecto, min(hoy, fecha_fin del aula).
+ *     responses:
+ *       200:
+ *         description: Datos para reporte Excel
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     aula:
+ *                       type: object
+ *                     rango:
+ *                       type: object
+ *                       properties:
+ *                         desde:
+ *                           type: string
+ *                           format: date
+ *                         hasta:
+ *                           type: string
+ *                           format: date
+ *                     fechas:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                         format: date
+ *                     alumnos:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     asistencias:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     resumen_general:
+ *                       type: object
+ *                     resumen_por_alumno:
+ *                       type: object
+ */
+router.get('/aulas/:id/reporte-excel', aulasController.getReporteExcelAula);
+
+/**
+ * @swagger
  * /aulas/por-curso/{id_curso}/ciclo/{id_ciclo}:
  *   get:
  *     summary: Lista aulas por curso y ciclo
