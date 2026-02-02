@@ -58,6 +58,9 @@ const router = express.Router();
  *                         type: string
  *                       apellido_materno:
  *                         type: string
+ *                       genero:
+ *                         type: string
+ *                         example: "M"
  *                       email:
  *                         type: string
  *                       telefono:
@@ -128,6 +131,9 @@ router.get('/', alumnosController.getAlumnosPorCiclo);
  *                         type: string
  *                       apellido_materno:
  *                         type: string
+ *                       genero:
+ *                         type: string
+ *                         example: "F"
  *                       email:
  *                         type: string
  *                       telefono:
