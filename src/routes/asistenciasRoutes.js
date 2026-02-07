@@ -269,4 +269,119 @@ router.get('/asistencias/aula/:id_aula', asistenciasController.getAsistenciasDeA
  */
 router.get('/asistencias/aula/:id_aula/alumno/:id_alumno', asistenciasController.getResumenDetalleAsistenciaAlumno);
 
+/**
+ * @swagger
+ * /asistencias/reporte/ciclo/{id_ciclo}:
+ *   get:
+ *     summary: Obtiene el reporte de asistencias por ciclo con KPIs separados por género
+ *     tags: [Asistencias]
+ *     parameters:
+ *       - in: path
+ *         name: id_ciclo
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID del ciclo
+ *     responses:
+ *       200:
+ *         description: Reporte de asistencias con KPIs por género
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     ciclo:
+ *                       type: object
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                         nombre:
+ *                           type: string
+ *                         anio:
+ *                           type: number
+ *                     alumnos_inscritos:
+ *                       type: object
+ *                       properties:
+ *                         masculino:
+ *                           type: number
+ *                         femenino:
+ *                           type: number
+ *                         total:
+ *                           type: number
+ *                     porcentaje_asistencia_alumnos:
+ *                       type: object
+ *                       properties:
+ *                         masculino:
+ *                           type: number
+ *                         femenino:
+ *                           type: number
+ *                         total:
+ *                           type: number
+ *                     profesores_asignados:
+ *                       type: object
+ *                       properties:
+ *                         masculino:
+ *                           type: number
+ *                         femenino:
+ *                           type: number
+ *                         total:
+ *                           type: number
+ *                     porcentaje_asistencia_profesores:
+ *                       type: object
+ *                       properties:
+ *                         masculino:
+ *                           type: number
+ *                         femenino:
+ *                           type: number
+ *                         total:
+ *                           type: number
+ */
+router.get('/asistencias/reporte/ciclo/:id_ciclo', asistenciasController.getReporteAsistenciasPorCiclo);
+
+/**
+ * @swagger
+ * /asistencias/alumnos-por-ministerio/ciclo/{id_ciclo}:
+ *   get:
+ *     summary: Obtiene la cantidad de alumnos por ministerio y género para un ciclo
+ *     tags: [Asistencias]
+ *     parameters:
+ *       - in: path
+ *         name: id_ciclo
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID del ciclo
+ *     responses:
+ *       200:
+ *         description: Lista de alumnos agrupados por ministerio y género
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id_ministerio:
+ *                         type: string
+ *                       ministerio:
+ *                         type: string
+ *                       masculino:
+ *                         type: number
+ *                       femenino:
+ *                         type: number
+ *                       total:
+ *                         type: number
+ */
+router.get('/asistencias/alumnos-por-ministerio/ciclo/:id_ciclo', asistenciasController.getAlumnosPorMinisterioPorCiclo);
+
 module.exports = router;

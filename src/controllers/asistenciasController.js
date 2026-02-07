@@ -35,3 +35,19 @@ exports.getResumenDetalleAsistenciaAlumno = async (req, res, next) => {
     sendResponse(res, { data });
   } catch (err) { next(err); }
 };
+
+exports.getReporteAsistenciasPorCiclo = async (req, res, next) => {
+  try {
+    const { id_ciclo } = req.params;
+    const data = await asistenciasService.getReporteAsistenciasPorCiclo(id_ciclo);
+    sendResponse(res, { data });
+  } catch (err) { next(err); }
+};
+
+exports.getAlumnosPorMinisterioPorCiclo = async (req, res, next) => {
+  try {
+    const { id_ciclo } = req.params;
+    const data = await asistenciasService.getAlumnosPorMinisterioPorCiclo(id_ciclo);
+    sendResponse(res, { data });
+  } catch (err) { next(err); }
+};

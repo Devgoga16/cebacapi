@@ -209,3 +209,275 @@ exports.getResumenDetalleAsistenciaAlumno = async (id_aula, id_alumno, { desde, 
     detalle,
   };
 };
+
+// Reporte de asistencias por ciclo con KPIs separados por género
+// Input: id_ciclo
+// Output:
+// {
+//   ciclo,
+//   alumnos_inscritos: { masculino, femenino, total },
+//   porcentaje_asistencia_alumnos: { masculino, femenino, total },
+//   profesores_asignados: { masculino, femenino, total },
+//   porcentaje_asistencia_profesores: { masculino, femenino, total }
+// }
+exports.getReporteAsistenciasPorCiclo = async (id_ciclo) => {
+  if (!id_ciclo) {
+    const err = new Error('id_ciclo es requerido');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // 1. Obtener todas las aulas del ciclo con profesores
+  const aulas = await Aula.find({ id_ciclo })
+    .populate('id_ciclo')
+    .populate('id_profesor')
+    .lean();
+
+  if (aulas.length === 0) {
+    const err = new Error('No se encontraron aulas para este ciclo');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const aulasIds = aulas.map((a) => a._id);
+  const ciclo = aulas[0].id_ciclo;
+
+  // 2. KPI 1: Cantidad de alumnos inscritos por género (usar AulaAlumno)
+  const aulaalumnos = await AulaAlumno.find({ 
+    id_aula: { $in: aulasIds }
+  })
+    .populate('id_alumno')
+    .lean();
+
+  const alumnosUnicos = new Map();
+  for (const aa of aulaalumnos) {
+    if (aa.id_alumno) {
+      const alumnoId = String(aa.id_alumno._id);
+      if (!alumnosUnicos.has(alumnoId)) {
+        alumnosUnicos.set(alumnoId, aa.id_alumno);
+      }
+    }
+  }
+
+  const alumnosArray = Array.from(alumnosUnicos.values());
+  const alumnosMasculino = alumnosArray.filter((a) => a.genero === 'M').length;
+  const alumnosFemenino = alumnosArray.filter((a) => a.genero === 'F').length;
+
+  // 3. KPI 2: Porcentaje de asistencia de alumnos por género
+  // Obtener IDs de profesores para excluirlos de las asistencias de alumnos
+  const profesoresIds = aulas.map((a) => String(a.id_profesor._id));
+  const alumnosIds = alumnosArray.map((a) => String(a._id));
+  
+  const asistenciasAlumnos = await Asistencia.find({
+    id_aula: { $in: aulasIds },
+    id_alumno: { $in: alumnosIds, $nin: profesoresIds }
+  }).lean();
+
+  // Agrupar asistencias de alumnos por género
+  const asistenciasPorAlumno = new Map();
+  for (const asist of asistenciasAlumnos) {
+    const alumnoId = String(asist.id_alumno);
+    if (!asistenciasPorAlumno.has(alumnoId)) {
+      asistenciasPorAlumno.set(alumnoId, []);
+    }
+    asistenciasPorAlumno.get(alumnoId).push(asist);
+  }
+
+  let totalPresenciasAlumnosM = 0;
+  let totalAsistenciasAlumnosM = 0;
+  let totalPresenciasAlumnosF = 0;
+  let totalAsistenciasAlumnosF = 0;
+
+  for (const alumno of alumnosArray) {
+    const alumnoId = String(alumno._id);
+    const asistencias = asistenciasPorAlumno.get(alumnoId) || [];
+    const presencias = asistencias.filter((a) => a.estado === 'presente' || a.estado === 'tarde').length;
+    const total = asistencias.length;
+
+    if (alumno.genero === 'M') {
+      totalPresenciasAlumnosM += presencias;
+      totalAsistenciasAlumnosM += total;
+    } else if (alumno.genero === 'F') {
+      totalPresenciasAlumnosF += presencias;
+      totalAsistenciasAlumnosF += total;
+    }
+  }
+
+  const porcentajeAsistenciaAlumnosM = totalAsistenciasAlumnosM > 0
+    ? Number(((totalPresenciasAlumnosM / totalAsistenciasAlumnosM) * 100).toFixed(2))
+    : 0;
+  const porcentajeAsistenciaAlumnosF = totalAsistenciasAlumnosF > 0
+    ? Number(((totalPresenciasAlumnosF / totalAsistenciasAlumnosF) * 100).toFixed(2))
+    : 0;
+  const porcentajeAsistenciaAlumnosTotal = (totalAsistenciasAlumnosM + totalAsistenciasAlumnosF) > 0
+    ? Number((((totalPresenciasAlumnosM + totalPresenciasAlumnosF) / (totalAsistenciasAlumnosM + totalAsistenciasAlumnosF)) * 100).toFixed(2))
+    : 0;
+
+  // 4. KPI 3: Cantidad de profesores asignados por género
+  const profesoresUnicos = new Map();
+  for (const aula of aulas) {
+    if (aula.id_profesor) {
+      const profesorId = String(aula.id_profesor._id);
+      if (!profesoresUnicos.has(profesorId)) {
+        profesoresUnicos.set(profesorId, aula.id_profesor);
+      }
+    }
+  }
+
+  const profesoresArray = Array.from(profesoresUnicos.values());
+  const profesoresMasculino = profesoresArray.filter((p) => p.genero === 'M').length;
+  const profesoresFemenino = profesoresArray.filter((p) => p.genero === 'F').length;
+
+  // 5. KPI 4: Porcentaje de asistencia de profesores por género
+  // Los profesores se registran con id_alumno = id_profesor del aula
+  const profesoresIdsArray = profesoresArray.map((p) => p._id);
+  const asistenciasProfesores = await Asistencia.find({
+    id_aula: { $in: aulasIds },
+    id_alumno: { $in: profesoresIdsArray }
+  }).lean();
+
+  // Agrupar asistencias de profesores por género
+  const asistenciasPorProfesor = new Map();
+  for (const asist of asistenciasProfesores) {
+    const profesorId = String(asist.id_alumno);
+    if (!asistenciasPorProfesor.has(profesorId)) {
+      asistenciasPorProfesor.set(profesorId, []);
+    }
+    asistenciasPorProfesor.get(profesorId).push(asist);
+  }
+
+  let totalPresenciasProfesoresM = 0;
+  let totalAsistenciasProfesoresM = 0;
+  let totalPresenciasProfesoresF = 0;
+  let totalAsistenciasProfesoresF = 0;
+
+  for (const profesor of profesoresArray) {
+    const profesorId = String(profesor._id);
+    const asistencias = asistenciasPorProfesor.get(profesorId) || [];
+    const presencias = asistencias.filter((a) => a.estado === 'presente' || a.estado === 'tarde').length;
+    const total = asistencias.length;
+
+    if (profesor.genero === 'M') {
+      totalPresenciasProfesoresM += presencias;
+      totalAsistenciasProfesoresM += total;
+    } else if (profesor.genero === 'F') {
+      totalPresenciasProfesoresF += presencias;
+      totalAsistenciasProfesoresF += total;
+    }
+  }
+
+  const porcentajeAsistenciaProfesoresM = totalAsistenciasProfesoresM > 0
+    ? Number(((totalPresenciasProfesoresM / totalAsistenciasProfesoresM) * 100).toFixed(2))
+    : 0;
+  const porcentajeAsistenciaProfesoresF = totalAsistenciasProfesoresF > 0
+    ? Number(((totalPresenciasProfesoresF / totalAsistenciasProfesoresF) * 100).toFixed(2))
+    : 0;
+  const porcentajeAsistenciaProfesoresTotal = (totalAsistenciasProfesoresM + totalAsistenciasProfesoresF) > 0
+    ? Number((((totalPresenciasProfesoresM + totalPresenciasProfesoresF) / (totalAsistenciasProfesoresM + totalAsistenciasProfesoresF)) * 100).toFixed(2))
+    : 0;
+
+  return {
+    ciclo: {
+      _id: ciclo._id,
+      nombre: ciclo.nombre,
+      anio: ciclo.anio,
+    },
+    alumnos_inscritos: {
+      masculino: alumnosMasculino,
+      femenino: alumnosFemenino,
+      total: alumnosMasculino + alumnosFemenino,
+    },
+    porcentaje_asistencia_alumnos: {
+      masculino: porcentajeAsistenciaAlumnosM,
+      femenino: porcentajeAsistenciaAlumnosF,
+      total: porcentajeAsistenciaAlumnosTotal,
+    },
+    profesores_asignados: {
+      masculino: profesoresMasculino,
+      femenino: profesoresFemenino,
+      total: profesoresMasculino + profesoresFemenino,
+    },
+    porcentaje_asistencia_profesores: {
+      masculino: porcentajeAsistenciaProfesoresM,
+      femenino: porcentajeAsistenciaProfesoresF,
+      total: porcentajeAsistenciaProfesoresTotal,
+    },
+  };
+};
+
+// Reporte de alumnos por ministerio y género por ciclo
+// Input: id_ciclo
+// Output: Array de { id_ministerio, ministerio, masculino, femenino, total }
+exports.getAlumnosPorMinisterioPorCiclo = async (id_ciclo) => {
+  if (!id_ciclo) {
+    const err = new Error('id_ciclo es requerido');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // 1. Obtener todas las aulas del ciclo
+  const aulas = await Aula.find({ id_ciclo }).lean();
+
+  if (aulas.length === 0) {
+    const err = new Error('No se encontraron aulas para este ciclo');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const aulasIds = aulas.map((a) => a._id);
+
+  // 2. Obtener todos los AulaAlumno con sus personas
+  const aulaalumnos = await AulaAlumno.find({ 
+    id_aula: { $in: aulasIds }
+  })
+    .populate({
+      path: 'id_alumno',
+      populate: { path: 'id_ministerio' }
+    })
+    .lean();
+
+  // 3. Agrupar por ministerio y contar por género
+  const ministeriosMap = new Map();
+
+  for (const aa of aulaalumnos) {
+    if (!aa.id_alumno) continue;
+
+    const alumno = aa.id_alumno;
+    const ministerioId = alumno.id_ministerio?._id ? String(alumno.id_ministerio._id) : 'sin_ministerio';
+    const ministerioNombre = alumno.id_ministerio?.nombre || 'Sin Ministerio';
+
+    if (!ministeriosMap.has(ministerioId)) {
+      ministeriosMap.set(ministerioId, {
+        id_ministerio: ministerioId === 'sin_ministerio' ? null : ministerioId,
+        ministerio: ministerioNombre,
+        masculino: 0,
+        femenino: 0,
+        total: 0,
+        alumnos: new Set()
+      });
+    }
+
+    const ministerioData = ministeriosMap.get(ministerioId);
+    const alumnoId = String(alumno._id);
+
+    // Evitar duplicados (un alumno puede estar en varias aulas del mismo ciclo)
+    if (!ministerioData.alumnos.has(alumnoId)) {
+      ministerioData.alumnos.add(alumnoId);
+
+      if (alumno.genero === 'M') {
+        ministerioData.masculino += 1;
+      } else if (alumno.genero === 'F') {
+        ministerioData.femenino += 1;
+      }
+      ministerioData.total += 1;
+    }
+  }
+
+  // 4. Convertir a array y eliminar el Set de alumnos
+  const resultado = Array.from(ministeriosMap.values()).map(({ alumnos, ...rest }) => rest);
+
+  // Ordenar por total descendente
+  resultado.sort((a, b) => b.total - a.total);
+
+  return resultado;
+};
