@@ -259,6 +259,65 @@ router.delete('/aulas/:id', aulasController.deleteAula);
 
 /**
  * @swagger
+ * /aulas/{id}/completo:
+ *   delete:
+ *     summary: Elimina un aula y todas sus relaciones (borrado físico completo)
+ *     tags: [Aulas]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID del aula a eliminar
+ *     responses:
+ *       200:
+ *         description: Aula y todas sus relaciones eliminadas correctamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     inscripciones:
+ *                       type: integer
+ *                       description: Cantidad de inscripciones eliminadas
+ *                     aulaAlumnos:
+ *                       type: integer
+ *                       description: Cantidad de aula-alumnos eliminados
+ *                     asistencias:
+ *                       type: integer
+ *                       description: Cantidad de asistencias eliminadas
+ *                     calificaciones:
+ *                       type: integer
+ *                       description: Cantidad de calificaciones eliminadas
+ *                     anunciosProfesor:
+ *                       type: integer
+ *                       description: Cantidad de anuncios eliminados
+ *                     tiposCalificacion:
+ *                       type: integer
+ *                       description: Cantidad de tipos de calificación eliminados
+ *                     requerimientosAula:
+ *                       type: integer
+ *                       description: Cantidad de requerimientos eliminados
+ *                     aula:
+ *                       type: boolean
+ *                       description: Si el aula fue eliminada
+ *                 message:
+ *                   type: string
+ *                 action_code:
+ *                   type: integer
+ *       404:
+ *         description: Aula no encontrada
+ */
+router.delete('/aulas/:id/completo', aulasController.deleteAulaCompleto);
+
+/**
+ * @swagger
  * /aulas/{id}/listas:
  *   get:
  *     summary: Obtiene las listas de AulaAlumnos e Inscripciones por aula

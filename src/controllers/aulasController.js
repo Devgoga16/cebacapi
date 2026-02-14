@@ -49,6 +49,26 @@ exports.deleteAula = async (req, res, next) => {
   }
 };
 
+exports.deleteAulaCompleto = async (req, res, next) => {
+  try {
+    const result = await aulasService.deleteAulaCompleto(req.params.id);
+    if (!result.success) {
+      return sendResponse(res, { 
+        state: 'failed', 
+        data: null, 
+        message: result.message, 
+        action_code: 404 
+      });
+    }
+    sendResponse(res, { 
+      data: result.deletedInfo, 
+      message: result.message 
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getListasPorAula = async (req, res, next) => {
   try {
     const { id } = req.params;

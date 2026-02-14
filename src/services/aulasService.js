@@ -2,6 +2,10 @@ const Aula = require('../models/aula');
 const AulaAlumno = require('../models/aulaalumno');
 const Inscripcion = require('../models/inscripcion');
 const Asistencia = require('../models/asistencia');
+const Calificacion = require('../models/calificacion');
+const AnuncioProfesor = require('../models/anuncioProfesor');
+const TipoCalificacion = require('../models/tipoCalificacion');
+const RequerimientoAula = require('../models/requerimientoAula');
 const mongoose = require('mongoose');
 
 function normalizeToLocalDayUTC(dateInput) {
@@ -106,6 +110,59 @@ exports.updateAula = async (id, data) => {
 exports.deleteAula = async (id) => {
   const result = await Aula.findByIdAndDelete(id);
   return !!result;
+};
+
+// Borrado físico completo del aula y todas sus relaciones
+exports.deleteAulaCompleto = async (id) => {
+  // Verificar que el aula existe
+  const aula = await Aula.findById(id);
+  if (!aula) {
+    return { success: false, message: 'Aula no encontrada' };
+  }
+
+  const deletedInfo = {
+    inscripciones: 0,
+    aulaAlumnos: 0,
+    asistencias: 0,
+    calificaciones: 0,
+    anunciosProfesor: 0,
+    tiposCalificacion: 0,
+    requerimientosAula: 0,
+    aula: false
+  };
+
+  try {
+    // Eliminar todas las relaciones de forma paralela
+    const [inscripcionesRes, aulaAlumnosRes, asistenciasRes, calificacionesRes, anunciosRes, tiposCalifRes, requerimientosRes] = await Promise.all([
+      Inscripcion.deleteMany({ id_aula: id }),
+      AulaAlumno.deleteMany({ id_aula: id }),
+      Asistencia.deleteMany({ id_aula: id }),
+      Calificacion.deleteMany({ id_aula: id }),
+      AnuncioProfesor.deleteMany({ id_aula: id }),
+      TipoCalificacion.deleteMany({ id_aula: id }),
+      RequerimientoAula.deleteMany({ id_aula: id })
+    ]);
+
+    deletedInfo.inscripciones = inscripcionesRes.deletedCount || 0;
+    deletedInfo.aulaAlumnos = aulaAlumnosRes.deletedCount || 0;
+    deletedInfo.asistencias = asistenciasRes.deletedCount || 0;
+    deletedInfo.calificaciones = calificacionesRes.deletedCount || 0;
+    deletedInfo.anunciosProfesor = anunciosRes.deletedCount || 0;
+    deletedInfo.tiposCalificacion = tiposCalifRes.deletedCount || 0;
+    deletedInfo.requerimientosAula = requerimientosRes.deletedCount || 0;
+
+    // Finalmente, eliminar el aula
+    const aulaDeleted = await Aula.findByIdAndDelete(id);
+    deletedInfo.aula = !!aulaDeleted;
+
+    return {
+      success: true,
+      message: 'Aula y todas sus relaciones eliminadas correctamente',
+      deletedInfo
+    };
+  } catch (error) {
+    throw new Error(`Error al eliminar aula y sus relaciones: ${error.message}`);
+  }
 };
 
 // Lista aulas filtrando por id_curso e id_ciclo
