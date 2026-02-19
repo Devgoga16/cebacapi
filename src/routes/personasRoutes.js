@@ -1,6 +1,31 @@
 const express = require('express');
+const multer = require('multer');
 const router = express.Router();
 const personasController = require('../controllers/personasController');
+
+const storage = multer.memoryStorage();
+const uploadExcel = multer({
+	storage,
+	limits: {
+		fileSize: 10 * 1024 * 1024,
+	},
+	fileFilter: (req, file, cb) => {
+		const allowedMimes = [
+			'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+			'application/vnd.ms-excel',
+			'application/octet-stream',
+		];
+
+		const isExcelByMime = allowedMimes.includes(file.mimetype);
+		const isExcelByExt = /\.(xlsx|xls)$/i.test(file.originalname || '');
+
+		if (isExcelByMime || isExcelByExt) {
+			cb(null, true);
+			return;
+		}
+		cb(new Error('Solo se permiten archivos Excel (.xlsx, .xls)'));
+	},
+});
 
 /**
  * @swagger
@@ -235,6 +260,85 @@ router.get('/personas/rol/:nombre_rol', personasController.getAllPersonasByRol);
  *                   type: integer
  */
 router.post('/personas', personasController.createPersona);
+
+/**
+ * @swagger
+ * /personas/import-excel:
+ *   post:
+ *     summary: Importa personas (y opcionalmente usuarios) desde un archivo Excel
+ *     tags: [Personas]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - file
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Archivo Excel .xlsx o .xls
+ *               create_users:
+ *                 type: string
+ *                 enum: ["true", "false"]
+ *                 description: Si es "true", crea usuarios usando DNI como username y password; si falta DNI en una fila, no crea usuario ni persona en esa fila
+ *               default_genero:
+ *                 type: string
+ *                 enum: [M, F]
+ *                 description: Género por defecto para filas sin este campo en Excel
+ *               default_direccion:
+ *                 type: string
+ *                 description: Dirección por defecto
+ *               default_estado_civil:
+ *                 type: string
+ *                 enum: [Soltero, Casado, Divorciado, Viudo, Otro]
+ *                 description: Estado civil por defecto
+ *               default_fecha_conversion:
+ *                 type: string
+ *                 format: date
+ *                 description: Fecha de conversión por defecto
+ *               default_fecha_bautismo:
+ *                 type: string
+ *                 format: date
+ *                 description: Fecha de bautismo por defecto cuando Bautizado=true
+ *     responses:
+ *       201:
+ *         description: Importación procesada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     total_filas:
+ *                       type: integer
+ *                     personas_insertadas:
+ *                       type: integer
+ *                     usuarios_insertados:
+ *                       type: integer
+ *                     filas_omitidas:
+ *                       type: integer
+ *                     errores:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           fila:
+ *                             type: integer
+ *                           motivo:
+ *                             type: string
+ *                 message:
+ *                   type: string
+ *                 action_code:
+ *                   type: integer
+ */
+router.post('/personas/import-excel', uploadExcel.single('file'), personasController.importarPersonasExcel);
 
 /**
  * @swagger

@@ -67,3 +67,19 @@ exports.buscarPersonas = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.importarPersonasExcel = async (req, res, next) => {
+  try {
+    const data = await personasService.importarPersonasDesdeExcel({
+      file: req.file,
+      options: req.body || {},
+    });
+    sendResponse(res, {
+      data,
+      message: 'Importación de Excel procesada',
+      action_code: 201,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
