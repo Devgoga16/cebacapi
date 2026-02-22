@@ -36,6 +36,7 @@ const PersonaSchema = new mongoose.Schema(
       enum: ['M', 'F'],
       required: true,
       trim: true,
+      default: 'M',
     },
     telefono: {
       type: String,
