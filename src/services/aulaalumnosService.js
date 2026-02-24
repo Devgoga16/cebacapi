@@ -199,6 +199,39 @@ exports.bulkCreateAulaAlumnos = async (id_alumno, id_aulas, additionalData = {})
     docs.push(doc);
   }
 
+  // Validar aforo para las aulas que serán 'inscrito' antes de insertar
+  const newInscritosMap = {};
+  for (const d of docs) {
+    if (d.estado === 'inscrito') {
+      const key = String(d.id_aula);
+      newInscritosMap[key] = (newInscritosMap[key] || 0) + 1;
+    }
+  }
+
+  const aulasToCheck = Object.keys(newInscritosMap);
+  if (aulasToCheck.length > 0) {
+    const problemas = [];
+    for (const aulaId of aulasToCheck) {
+      // Intentar obtener el documento de aula desde las aulas ya consultadas
+      const aulaDoc = aulasConCursos.find(a => String(a._id) === aulaId);
+      const aforo = (aulaDoc && typeof aulaDoc.aforo === 'number') ? aulaDoc.aforo : Infinity;
+
+      // Contar inscritos actuales
+      const inscritosCount = await AulaAlumno.countDocuments({ id_aula: aulaId, estado: 'inscrito' });
+
+      if (inscritosCount + newInscritosMap[aulaId] > aforo) {
+        problemas.push({ aulaId, nombre: aulaDoc?.nombre || aulaId, aforo, actuales: inscritosCount, intentan: newInscritosMap[aulaId] });
+      }
+    }
+
+    if (problemas.length > 0) {
+      const mensaje = problemas.map(p => `Aula ${p.nombre} (aforo=${p.aforo}) tiene ${p.actuales} inscritos; se intentan inscribir ${p.intentan}`).join('; ');
+      const err = new Error(`No hay suficiente aforo: ${mensaje}`);
+      err.statusCode = 400;
+      throw err;
+    }
+  }
+
   let inserted = [];
   if (docs.length > 0) {
     const result = await AulaAlumno.insertMany(docs, { ordered: false });
@@ -215,17 +248,35 @@ exports.bulkCreateAulaAlumnos = async (id_alumno, id_aulas, additionalData = {})
 
 // Inscribe un AulaAlumno cambiando su estado a 'inscrito'
 exports.inscribirAulaAlumno = async (id) => {
+  // Obtener el registro para comprobar aforo y estado actual
+  const existing = await AulaAlumno.findById(id);
+  if (!existing) {
+    const err = new Error('AulaAlumno no encontrado');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // Si ya está inscrito, devolver el documento poblado
+  if (existing.estado === 'inscrito') {
+    return await AulaAlumno.findById(id).populate('id_aula id_alumno');
+  }
+
+  // Obtener aforo del aula
+  const aulaDoc = await Aula.findById(existing.id_aula).select('aforo nombre').lean();
+  const aforo = (aulaDoc && typeof aulaDoc.aforo === 'number') ? aulaDoc.aforo : Infinity;
+
+  const inscritosCount = await AulaAlumno.countDocuments({ id_aula: existing.id_aula, estado: 'inscrito' });
+  if (inscritosCount >= aforo) {
+    const err = new Error(`El aula "${aulaDoc?.nombre || existing.id_aula}" ya alcanzó su aforo (${aforo}). No es posible inscribir más alumnos.`);
+    err.statusCode = 400;
+    throw err;
+  }
+
   const aulaAlumno = await AulaAlumno.findByIdAndUpdate(
     id,
     { estado: 'inscrito' },
     { new: true }
   ).populate('id_aula id_alumno');
-
-  if (!aulaAlumno) {
-    const err = new Error('AulaAlumno no encontrado');
-    err.statusCode = 404;
-    throw err;
-  }
 
   return aulaAlumno;
 };
