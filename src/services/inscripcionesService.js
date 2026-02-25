@@ -125,7 +125,7 @@ exports.getAulasDisponiblesParaInscripcion = async (id_persona) => {
   // Obtener conteo de inscritos por aula
   const aulaIdsDelCiclo = aulas.map(a => a._id);
   const conteosInscritos = await AulaAlumno.aggregate([
-    { $match: { id_aula: { $in: aulaIdsDelCiclo }, estado: "inscrito" } },
+    { $match: { id_aula: { $in: aulaIdsDelCiclo }, estado: { $in: ["inscrito", "en curso"] } } },
     { $group: { _id: "$id_aula", count: { $sum: 1 } } }
   ]);
   const conteoMap = new Map(conteosInscritos.map(c => [String(c._id), c.count]));
