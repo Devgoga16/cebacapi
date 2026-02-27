@@ -11,7 +11,9 @@ const AulaSchema = new mongoose.Schema({
   id_ciclo: { type: mongoose.Schema.Types.ObjectId, ref: 'Ciclo', required: true },
   fecha_inicio: { type: Date, required: true },
   fecha_fin: { type: Date, required: true },
-  estado: { type: String, enum: ['creada', 'iniciada', 'terminada'], required: true, default: 'creada' }
+  estado: { type: String, enum: ['creada', 'iniciada', 'terminada'], required: true, default: 'creada' },
+  linkWhatsApp: { type: String },
+  numeroAula: { type: String }
 }, {
   collection: 'aulas',
   timestamps: true

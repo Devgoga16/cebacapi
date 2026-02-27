@@ -46,6 +46,12 @@ const aulasController = require('../controllers/aulasController');
  *         estado:
  *           type: string
  *           enum: [creada, iniciada, terminada]
+ *         linkWhatsApp:
+ *           type: string
+ *           description: Enlace de WhatsApp del aula
+ *         numeroAula:
+ *           type: string
+ *           description: Número identificador del aula
  *         createdAt:
  *           type: string
  *         updatedAt:

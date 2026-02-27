@@ -12,6 +12,7 @@ exports.getAllAulas = async (req, res, next) => {
 
 exports.getAulaById = async (req, res, next) => {
   try {
+    console.log('ID recibido en getAulaById:', req.params.id); // DEBUG
     const aula = await aulasService.getAulaById(req.params.id);
     if (!aula) return sendResponse(res, { state: 'failed', data: null, message: 'Aula no encontrada', action_code: 404 });
     sendResponse(res, { data: aula });
@@ -20,8 +21,15 @@ exports.getAulaById = async (req, res, next) => {
   }
 };
 
+
+const { validateAulaInput } = require('../utils/aulaValidator');
+
 exports.createAula = async (req, res, next) => {
   try {
+    const errors = validateAulaInput(req.body);
+    if (errors.length) {
+      return sendResponse(res, { state: 'failed', data: null, message: errors.join(', '), action_code: 400 });
+    }
     const newAula = await aulasService.createAula(req.body);
     sendResponse(res, { data: newAula, message: 'Aula creada', action_code: 201 });
   } catch (err) {
@@ -29,9 +37,28 @@ exports.createAula = async (req, res, next) => {
   }
 };
 
+// Convierte snake_case a camelCase para los campos personalizados
+function normalizeAulaFields(body) {
+  if (body.link_whatsapp) {
+    body.linkWhatsApp = body.link_whatsapp;
+    delete body.link_whatsapp;
+  }
+  if (body.numero_aula) {
+    body.numeroAula = body.numero_aula;
+    delete body.numero_aula;
+  }
+  return body;
+}
+
 exports.updateAula = async (req, res, next) => {
   try {
-    const updatedAula = await aulasService.updateAula(req.params.id, req.body);
+    const normalizedBody = normalizeAulaFields({ ...req.body });
+    console.log('Body normalizado en updateAula:', normalizedBody); // DEBUG
+    const errors = validateAulaInput(normalizedBody);
+    if (errors.length) {
+      return sendResponse(res, { state: 'failed', data: null, message: errors.join(', '), action_code: 400 });
+    }
+    const updatedAula = await aulasService.updateAula(req.params.id, normalizedBody);
     if (!updatedAula) return sendResponse(res, { state: 'failed', data: null, message: 'Aula no encontrada', action_code: 404 });
     sendResponse(res, { data: updatedAula, message: 'Aula actualizada' });
   } catch (err) {
