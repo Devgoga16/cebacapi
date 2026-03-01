@@ -377,24 +377,6 @@ exports.getDocenteResumenAula = async (idAula, fecha) => {
       return ad.localeCompare(bd);
     });
 
-  // Agregar profesor al inicio de la lista
-  if (aula.id_profesor) {
-    alumnos.unshift({
-      id_alumno: String(aula.id_profesor._id),
-      alumno: {
-        _id: aula.id_profesor._id,
-        nombres: aula.id_profesor.nombres,
-        apellido_paterno: aula.id_profesor.apellido_paterno,
-        apellido_materno: aula.id_profesor.apellido_materno,
-        numero_documento: aula.id_profesor.numero_documento,
-      },
-      estado_aula: null,
-      asistencia_hoy: null,
-      totales_asistencia: { presente: 0, ausente: 0, tarde: 0, justificado: 0 },
-      tipo: 'profesor',
-    });
-  }
-
   return {
     aula,
     fecha: fechaClave,
