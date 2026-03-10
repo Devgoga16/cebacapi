@@ -279,7 +279,7 @@ exports.getDocenteResumenAula = async (idAula, fecha) => {
     AulaAlumno.find({ id_aula: idAula })
       .populate({
         path: 'id_alumno',
-        select: 'nombres apellido_paterno apellido_materno numero_documento',
+        select: 'nombres apellido_paterno apellido_materno numero_documento telefono fecha_nacimiento',
       })
       .lean(),
   ]);
