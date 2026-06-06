@@ -534,4 +534,236 @@ router.delete('/personas/:id', personasController.deletePersona);
  */
 router.get('/personas/buscar', personasController.buscarPersonas);
 
+/**
+ * @swagger
+ * /personas/{id}/inscripciones:
+ *   get:
+ *     summary: Obtiene las inscripciones de una persona con información detallada
+ *     description: Retorna todas las inscripciones (aulaalumno) de una persona, incluyendo información del aula, curso, nivel del curso y profesor. Los datos se presentan con todas las relaciones resueltas para facilitar su uso.
+ *     tags: [Personas]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID de la persona (ObjectId)
+ *         example: "507f1f77bcf86cd799439011"
+ *     responses:
+ *       200:
+ *         description: Inscripciones encontradas exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                   example: "success"
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         description: ID de la inscripción (aulaalumno)
+ *                         example: "507f1f77bcf86cd799439011"
+ *                       id_aula:
+ *                         type: string
+ *                         description: ID del aula
+ *                         example: "507f1f77bcf86cd799439012"
+ *                       id_alumno:
+ *                         type: string
+ *                         description: ID del alumno (persona)
+ *                         example: "507f1f77bcf86cd799439013"
+ *                       estado:
+ *                         type: string
+ *                         enum: [aprobado, reprobado, en curso, retirado, inscrito, pendiente]
+ *                         description: Estado de la inscripción del alumno
+ *                         example: "en curso"
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         description: Fecha de creación del registro
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         description: Fecha de última actualización
+ *                       aula:
+ *                         type: object
+ *                         description: Información del aula
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                             description: ID del aula
+ *                           es_presencial:
+ *                             type: boolean
+ *                             description: Indica si el aula es presencial
+ *                             example: true
+ *                           dia:
+ *                             type: string
+ *                             description: Día de la semana
+ *                             example: "Lunes"
+ *                           hora_inicio:
+ *                             type: string
+ *                             description: Hora de inicio de la clase
+ *                             example: "18:00"
+ *                           hora_fin:
+ *                             type: string
+ *                             description: Hora de finalización de la clase
+ *                             example: "20:00"
+ *                           aforo:
+ *                             type: number
+ *                             description: Capacidad máxima del aula
+ *                             example: 30
+ *                           estado:
+ *                             type: string
+ *                             enum: [creada, iniciada, terminada]
+ *                             description: Estado actual del aula
+ *                             example: "iniciada"
+ *                           fecha_inicio:
+ *                             type: string
+ *                             format: date-time
+ *                             description: Fecha de inicio del aula
+ *                           fecha_fin:
+ *                             type: string
+ *                             format: date-time
+ *                             description: Fecha de finalización del aula
+ *                           linkWhatsApp:
+ *                             type: string
+ *                             description: Link del grupo de WhatsApp (opcional)
+ *                             example: "https://chat.whatsapp.com/..."
+ *                           numeroAula:
+ *                             type: string
+ *                             description: Número identificador del aula (opcional)
+ *                             example: "A101"
+ *                       curso:
+ *                         type: object
+ *                         description: Información del curso
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                             description: ID del curso
+ *                           nombre_curso:
+ *                             type: string
+ *                             description: Nombre del curso
+ *                             example: "Introducción a la Teología"
+ *                           descripcion_curso:
+ *                             type: string
+ *                             description: Descripción del curso (opcional)
+ *                           electivo:
+ *                             type: boolean
+ *                             description: Indica si el curso es electivo
+ *                             example: false
+ *                           sesiones:
+ *                             type: number
+ *                             description: Número de sesiones del curso
+ *                             example: 12
+ *                       nivel:
+ *                         type: object
+ *                         description: Información del nivel académico del curso
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                             description: ID del nivel
+ *                           nombre_nivel:
+ *                             type: string
+ *                             description: Nombre del nivel académico
+ *                             example: "Nivel 1"
+ *                       profesor:
+ *                         type: object
+ *                         description: Información del profesor del aula
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                             description: ID del profesor (persona)
+ *                           nombres:
+ *                             type: string
+ *                             description: Nombres del profesor
+ *                             example: "JUAN CARLOS"
+ *                           apellido_paterno:
+ *                             type: string
+ *                             description: Apellido paterno del profesor
+ *                             example: "PÉREZ"
+ *                           apellido_materno:
+ *                             type: string
+ *                             description: Apellido materno del profesor
+ *                             example: "GARCÍA"
+ *                           email:
+ *                             type: string
+ *                             description: Email del profesor (opcional)
+ *                             example: "juan.perez@example.com"
+ *                           telefono:
+ *                             type: string
+ *                             description: Teléfono del profesor
+ *                             example: "987654321"
+ *                       ciclo:
+ *                         type: object
+ *                         description: Información del ciclo académico
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                             description: ID del ciclo
+ *                           nombre_ciclo:
+ *                             type: string
+ *                             description: Nombre del ciclo
+ *                             example: "2024-I"
+ *                           fecha_inicio:
+ *                             type: string
+ *                             format: date-time
+ *                             description: Fecha de inicio del ciclo
+ *                           fecha_fin:
+ *                             type: string
+ *                             format: date-time
+ *                             description: Fecha de fin del ciclo
+ *                           actual:
+ *                             type: boolean
+ *                             description: Indica si es el ciclo actual
+ *                             example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Inscripciones encontradas"
+ *                 action_code:
+ *                   type: integer
+ *                   example: 200
+ *       400:
+ *         description: ID de persona inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                   example: "failed"
+ *                 data:
+ *                   type: 'null'
+ *                 message:
+ *                   type: string
+ *                   example: "ID de persona inválido"
+ *                 action_code:
+ *                   type: integer
+ *                   example: 400
+ *       500:
+ *         description: Error del servidor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                   example: "failed"
+ *                 data:
+ *                   type: 'null'
+ *                 message:
+ *                   type: string
+ *                   example: "Error al obtener inscripciones"
+ *                 action_code:
+ *                   type: integer
+ *                   example: 500
+ */
+router.get('/personas/:id/inscripciones', personasController.getInscripcionesByPersona);
+
 module.exports = router;

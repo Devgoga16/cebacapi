@@ -9,10 +9,12 @@
     "migrate:persona-apellidos": "node scripts/migrate_persona_apellidos.js"
   },
   "dependencies": {
+    "adm-zip": "^0.5.17",
     "axios": "^1.13.1",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
+    "exceljs": "^4.4.0",
     "express": "^4.18.2",
     "form-data": "^4.0.4",
     "mongoose": "^7.6.0",

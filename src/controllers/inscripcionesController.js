@@ -62,7 +62,9 @@ exports.aprobarInscripcion = async (req, res, next) => {
 exports.rechazarInscripcion = async (req, res, next) => {
   try {
     const { id } = req.params;
+
     const { observacion } = req.body || {};
+    console.log('Observación recibida:', observacion);
     const result = await inscripcionesService.rechazarInscripcion(id, observacion);
     sendResponse(res, { data: result.inscripcion, message: result.message });
   } catch (err) {

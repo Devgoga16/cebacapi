@@ -83,3 +83,15 @@ exports.importarPersonasExcel = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getInscripcionesByPersona = async (req, res, next) => {
+  try {
+    const inscripciones = await personasService.getInscripcionesByPersona(req.params.id);
+    sendResponse(res, { 
+      data: inscripciones, 
+      message: inscripciones.length > 0 ? 'Inscripciones encontradas' : 'No se encontraron inscripciones para esta persona'
+    });
+  } catch (err) {
+    next(err);
+  }
+};

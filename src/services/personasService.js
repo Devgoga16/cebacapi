@@ -478,3 +478,154 @@ exports.importarPersonasDesdeExcel = async ({ file, options = {} }) => {
 
   return summary;
 };
+
+/**
+ * Obtiene las inscripciones de una persona con información detallada
+ * @param {string} id_persona - ID de la persona
+ * @returns {Array} Lista de inscripciones con información del aula, curso, nivel y profesor
+ */
+exports.getInscripcionesByPersona = async (id_persona) => {
+  const mongoose = require('mongoose');
+  const AulaAlumno = require('../models/aulaalumno');
+
+  if (!mongoose.Types.ObjectId.isValid(id_persona)) {
+    const err = new Error('ID de persona inválido');
+    err.status = 400;
+    throw err;
+  }
+
+  const inscripciones = await AulaAlumno.aggregate([
+    {
+      $match: {
+        id_alumno: new mongoose.Types.ObjectId(id_persona)
+      }
+    },
+    {
+      $lookup: {
+        from: 'aulas',
+        localField: 'id_aula',
+        foreignField: '_id',
+        as: 'aula'
+      }
+    },
+    {
+      $unwind: {
+        path: '$aula',
+        preserveNullAndEmptyArrays: false
+      }
+    },
+    {
+      $lookup: {
+        from: 'cursos',
+        localField: 'aula.id_curso',
+        foreignField: '_id',
+        as: 'curso'
+      }
+    },
+    {
+      $unwind: {
+        path: '$curso',
+        preserveNullAndEmptyArrays: false
+      }
+    },
+    {
+      $lookup: {
+        from: 'niveles',
+        localField: 'curso.id_nivel',
+        foreignField: '_id',
+        as: 'nivel'
+      }
+    },
+    {
+      $unwind: {
+        path: '$nivel',
+        preserveNullAndEmptyArrays: false
+      }
+    },
+    {
+      $lookup: {
+        from: 'personas',
+        localField: 'aula.id_profesor',
+        foreignField: '_id',
+        as: 'profesor'
+      }
+    },
+    {
+      $unwind: {
+        path: '$profesor',
+        preserveNullAndEmptyArrays: false
+      }
+    },
+    {
+      $lookup: {
+        from: 'ciclos',
+        localField: 'aula.id_ciclo',
+        foreignField: '_id',
+        as: 'ciclo'
+      }
+    },
+    {
+      $unwind: {
+        path: '$ciclo',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $project: {
+        _id: 1,
+        id_aula: 1,
+        id_alumno: 1,
+        estado: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        aula: {
+          _id: '$aula._id',
+          es_presencial: '$aula.es_presencial',
+          dia: '$aula.dia',
+          hora_inicio: '$aula.hora_inicio',
+          hora_fin: '$aula.hora_fin',
+          aforo: '$aula.aforo',
+          estado: '$aula.estado',
+          fecha_inicio: '$aula.fecha_inicio',
+          fecha_fin: '$aula.fecha_fin',
+          linkWhatsApp: '$aula.linkWhatsApp',
+          numeroAula: '$aula.numeroAula'
+        },
+        curso: {
+          _id: '$curso._id',
+          nombre_curso: '$curso.nombre_curso',
+          descripcion_curso: '$curso.descripcion_curso',
+          electivo: '$curso.electivo',
+          sesiones: '$curso.sesiones'
+        },
+        nivel: {
+          _id: '$nivel._id',
+          nombre_nivel: '$nivel.nombre_nivel'
+        },
+        profesor: {
+          _id: '$profesor._id',
+          nombres: '$profesor.nombres',
+          apellido_paterno: '$profesor.apellido_paterno',
+          apellido_materno: '$profesor.apellido_materno',
+          email: '$profesor.email',
+          telefono: '$profesor.telefono'
+        },
+        ciclo: {
+          _id: '$ciclo._id',
+          nombre_ciclo: '$ciclo.nombre_ciclo',
+          fecha_inicio: '$ciclo.fecha_inicio',
+          fecha_fin: '$ciclo.fecha_fin',
+          actual: '$ciclo.actual'
+        }
+      }
+    },
+    {
+      $sort: {
+        'ciclo.fecha_inicio': -1,
+        'aula.fecha_inicio': -1
+      }
+    }
+  ]);
+
+  return inscripciones;
+};
