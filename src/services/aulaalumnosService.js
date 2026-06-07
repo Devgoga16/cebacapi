@@ -281,3 +281,80 @@ exports.inscribirAulaAlumno = async (id) => {
   return aulaAlumno;
 };
 
+/**
+ * Actualiza el estado de los alumnos de un aula basándose en su nota_ponderada
+ * Si nota_ponderada >= 11 → estado = 'aprobado'
+ * Si nota_ponderada < 11 → estado = 'reprobado'
+ * Si nota_ponderada es null → estado = 'retirado'
+ * @param {string} id_aula - ID del aula
+ * @returns {object} Resumen de la actualización
+ */
+exports.actualizarEstadosPorNotaPonderada = async (id_aula) => {
+  try {
+    // Validar que el aula existe
+    const aulaDoc = await Aula.findById(id_aula).lean();
+    if (!aulaDoc) {
+      const err = new Error('Aula no encontrada');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    // Obtener todos los alumnos del aula
+    const alumnosAula = await AulaAlumno.find({ id_aula }).lean();
+
+    if (alumnosAula.length === 0) {
+      return {
+        total: 0,
+        aprobados: 0,
+        reprobados: 0,
+        retirados: 0,
+        actualizados: 0,
+      };
+    }
+
+    let aprobados = 0;
+    let reprobados = 0;
+    let retirados = 0;
+    let actualizados = 0;
+
+    // Actualizar cada alumno según su nota_ponderada
+    for (const alumno of alumnosAula) {
+      let nuevoEstado;
+      
+      if (alumno.nota_ponderada === null || alumno.nota_ponderada === undefined) {
+        // Sin nota → retirado
+        nuevoEstado = 'retirado';
+        retirados++;
+      } else if (alumno.nota_ponderada >= 11) {
+        // Nota >= 11 → aprobado
+        nuevoEstado = 'aprobado';
+        aprobados++;
+      } else {
+        // Nota < 11 → reprobado
+        nuevoEstado = 'reprobado';
+        reprobados++;
+      }
+      
+      // Solo actualizar si el estado cambió
+      if (alumno.estado !== nuevoEstado) {
+        await AulaAlumno.updateOne(
+          { _id: alumno._id },
+          { $set: { estado: nuevoEstado } }
+        );
+        actualizados++;
+      }
+    }
+
+    return {
+      total: alumnosAula.length,
+      aprobados,
+      reprobados,
+      retirados,
+      actualizados,
+    };
+  } catch (error) {
+    console.error('Error al actualizar estados por nota ponderada:', error);
+    throw error;
+  }
+};
+

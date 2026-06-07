@@ -80,3 +80,20 @@ exports.deleteCalificacion = async (req, res, next) => {
     next(err); 
   }
 };
+
+/**
+ * Recalcula los promedios ponderados de todos los alumnos de un aula
+ * POST /api/calificaciones/recalcular-promedios/:id_aula
+ */
+exports.recalcularPromediosPonderadosAula = async (req, res, next) => {
+  try {
+    const { id_aula } = req.params;
+    const resultado = await calificacionesService.recalcularPromediosPonderadosAula(id_aula);
+    sendResponse(res, { 
+      data: resultado, 
+      message: 'Promedios ponderados recalculados exitosamente' 
+    });
+  } catch (err) { 
+    next(err); 
+  }
+};

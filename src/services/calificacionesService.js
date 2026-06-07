@@ -87,15 +87,19 @@ exports.getRosterDeAulaParaCalificaciones = async (id_aula) => {
       };
     });
 
-    // Calcular promedio ponderado si tiene todas las notas
-    const todasLasNotas = calificaciones.every(c => c.nota !== null);
-    let promedioPonderado = null;
+    // Usar la nota_ponderada guardada en aulaalumno
+    // Si no existe o es null, calcular en el momento
+    let promedioPonderado = aa.nota_ponderada;
     
-    if (todasLasNotas) {
-      promedioPonderado = calificaciones.reduce((sum, cal) => {
-        return sum + (cal.nota * cal.porcentaje / 100);
-      }, 0);
-      promedioPonderado = Math.round(promedioPonderado * 100) / 100; // 2 decimales
+    if (promedioPonderado === null || promedioPonderado === undefined) {
+      const todasLasNotas = calificaciones.every(c => c.nota !== null);
+      
+      if (todasLasNotas) {
+        promedioPonderado = calificaciones.reduce((sum, cal) => {
+          return sum + (cal.nota * cal.porcentaje / 100);
+        }, 0);
+        promedioPonderado = Math.round(promedioPonderado * 100) / 100; // 2 decimales
+      }
     }
 
     return {
@@ -188,6 +192,22 @@ exports.registrarCalificaciones = async ({ items, registrado_por }) => {
 
   const result = await Calificacion.bulkWrite(ops, { ordered: false });
   
+  // Actualizar promedios ponderados de los alumnos afectados
+  const alumnosAfectados = [...new Set(items.map(it => ({
+    id_aula: it.id_aula,
+    id_alumno: it.id_alumno
+  })))];
+
+  // Recalcular promedio para cada alumno afectado
+  for (const { id_aula, id_alumno } of alumnosAfectados) {
+    try {
+      await exports.calcularYActualizarPromedioPonderado(id_aula, id_alumno);
+    } catch (error) {
+      console.error(`Error al actualizar promedio ponderado para alumno ${id_alumno}:`, error);
+      // No lanzar error, continuar con los demás
+    }
+  }
+  
   return {
     matched: result.matchedCount || 0,
     modified: result.modifiedCount || 0,
@@ -257,6 +277,128 @@ exports.getResumenCalificacionesAula = async (id_aula) => {
 };
 
 /**
+ * Calcula el promedio ponderado de un alumno en un aula y lo guarda en aulaalumno
+ * @param {string} id_aula - ID del aula
+ * @param {string} id_alumno - ID del alumno
+ * @returns {number|null} El promedio ponderado calculado o null si no está completo
+ */
+exports.calcularYActualizarPromedioPonderado = async (id_aula, id_alumno) => {
+  try {
+    // Obtener todos los tipos de calificación del aula
+    const tipos = await TipoCalificacion.find({ id_aula }).lean();
+    
+    if (tipos.length === 0) {
+      // No hay tipos de calificación configurados, poner null
+      await AulaAlumno.updateOne(
+        { id_aula, id_alumno },
+        { $set: { nota_ponderada: null } }
+      );
+      return null;
+    }
+
+    // Obtener todas las calificaciones del alumno en esta aula
+    const calificaciones = await Calificacion.find({ id_aula, id_alumno }).lean();
+
+    // Verificar si tiene todas las calificaciones
+    if (calificaciones.length !== tipos.length) {
+      // Faltan calificaciones, poner null
+      await AulaAlumno.updateOne(
+        { id_aula, id_alumno },
+        { $set: { nota_ponderada: null } }
+      );
+      return null;
+    }
+
+    // Crear un mapa de calificaciones por tipo
+    const mapCalificaciones = new Map();
+    calificaciones.forEach(cal => {
+      mapCalificaciones.set(String(cal.id_tipo_calificacion), cal.nota);
+    });
+
+    // Calcular promedio ponderado
+    let sumaPonderada = 0;
+    let sumaPesos = 0;
+
+    for (const tipo of tipos) {
+      const nota = mapCalificaciones.get(String(tipo._id));
+      if (nota === undefined || nota === null) {
+        // Falta una calificación, no se puede calcular
+        await AulaAlumno.updateOne(
+          { id_aula, id_alumno },
+          { $set: { nota_ponderada: null } }
+        );
+        return null;
+      }
+      sumaPonderada += nota * (tipo.porcentaje / 100);
+      sumaPesos += tipo.porcentaje;
+    }
+
+    // Calcular el promedio final (normalizado si los pesos no suman exactamente 100)
+    let promedioPonderado;
+    if (sumaPesos > 0) {
+      promedioPonderado = (sumaPonderada * 100) / sumaPesos;
+    } else {
+      promedioPonderado = 0;
+    }
+
+    // Redondear a 2 decimales
+    promedioPonderado = Math.round(promedioPonderado * 100) / 100;
+
+    // Actualizar en aulaalumno
+    await AulaAlumno.updateOne(
+      { id_aula, id_alumno },
+      { $set: { nota_ponderada: promedioPonderado } }
+    );
+
+    return promedioPonderado;
+  } catch (error) {
+    console.error('Error al calcular promedio ponderado:', error);
+    throw error;
+  }
+};
+
+/**
+ * Recalcula y actualiza los promedios ponderados de todos los alumnos de un aula
+ * Útil para migración o recálculo masivo
+ * @param {string} id_aula - ID del aula
+ * @returns {object} Resumen del recálculo
+ */
+exports.recalcularPromediosPonderadosAula = async (id_aula) => {
+  try {
+    // Obtener todos los alumnos del aula
+    const alumnosAula = await AulaAlumno.find({ id_aula }).select('id_alumno').lean();
+
+    const resultados = {
+      total: alumnosAula.length,
+      actualizados: 0,
+      con_promedio: 0,
+      sin_promedio: 0,
+    };
+
+    // Recalcular para cada alumno
+    for (const aa of alumnosAula) {
+      const promedio = await exports.calcularYActualizarPromedioPonderado(
+        id_aula, 
+        aa.id_alumno
+      );
+      
+      resultados.actualizados++;
+      
+      if (promedio !== null) {
+        resultados.con_promedio++;
+      } else {
+        resultados.sin_promedio++;
+      }
+    }
+
+    return resultados;
+  } catch (error) {
+    console.error('Error al recalcular promedios del aula:', error);
+    throw error;
+  }
+};
+
+/**
  * Elimina una calificación específica
  */
 exports.deleteCalificacion = async (id_aula, id_alumno, id_tipo_calificacion) => {
@@ -271,6 +413,9 @@ exports.deleteCalificacion = async (id_aula, id_alumno, id_tipo_calificacion) =>
     err.statusCode = 404;
     throw err;
   }
+
+  // Recalcular promedio ponderado después de eliminar
+  await exports.calcularYActualizarPromedioPonderado(id_aula, id_alumno);
   
   return result;
 };

@@ -335,4 +335,50 @@ router.get('/resumen/:id_aula', calificacionesController.getResumenCalificacione
  */
 router.delete('/:id_aula/alumno/:id_alumno/tipo/:id_tipo_calificacion', calificacionesController.deleteCalificacion);
 
+/**
+ * @swagger
+ * /calificaciones/recalcular-promedios/{id_aula}:
+ *   post:
+ *     summary: Recalcula los promedios ponderados de todos los alumnos de un aula
+ *     description: Útil para actualizar todos los promedios después de cambios en las calificaciones o tipos de calificación
+ *     tags: [Calificaciones]
+ *     parameters:
+ *       - in: path
+ *         name: id_aula
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID del aula
+ *     responses:
+ *       200:
+ *         description: Promedios recalculados exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                   example: "success"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                       description: Total de alumnos en el aula
+ *                     actualizados:
+ *                       type: number
+ *                       description: Alumnos procesados
+ *                     con_promedio:
+ *                       type: number
+ *                       description: Alumnos con promedio calculado
+ *                     sin_promedio:
+ *                       type: number
+ *                       description: Alumnos sin promedio (faltan calificaciones)
+ *                 message:
+ *                   type: string
+ *                   example: "Promedios ponderados recalculados exitosamente"
+ */
+router.post('/recalcular-promedios/:id_aula', calificacionesController.recalcularPromediosPonderadosAula);
+
 module.exports = router;

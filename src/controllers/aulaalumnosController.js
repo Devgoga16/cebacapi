@@ -82,3 +82,16 @@ exports.inscribirAulaAlumno = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.actualizarEstadosPorNotaPonderada = async (req, res, next) => {
+  try {
+    const { id_aula } = req.params;
+    const resultado = await aulaalumnosService.actualizarEstadosPorNotaPonderada(id_aula);
+    sendResponse(res, { 
+      data: resultado, 
+      message: 'Estados actualizados según nota ponderada' 
+    });
+  } catch (err) {
+    next(err);
+  }
+};

@@ -414,4 +414,55 @@ router.post('/aulaalumnos/bulk', aulaalumnosController.bulkCreateAulaAlumnos);
  */
 router.put('/aulaalumnos/aprobar/:id', aulaalumnosController.inscribirAulaAlumno);
 
+/**
+ * @swagger
+ * /aulaalumnos/actualizar-estados-aula/{id_aula}:
+ *   post:
+ *     summary: Actualiza los estados de alumnos según su nota ponderada
+ *     description: Cambia el estado a 'aprobado' si nota >= 11, 'reprobado' si < 11, o 'retirado' si no tiene nota.
+ *     tags: [AulaAlumnos]
+ *     parameters:
+ *       - in: path
+ *         name: id_aula
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID del aula
+ *     responses:
+ *       200:
+ *         description: Estados actualizados exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                   example: "success"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                       description: Total de alumnos en el aula
+ *                     aprobados:
+ *                       type: number
+ *                       description: Alumnos aprobados (nota >= 11)
+ *                     reprobados:
+ *                       type: number
+ *                       description: Alumnos reprobados (nota < 11)
+ *                     retirados:
+ *                       type: number
+ *                       description: Alumnos sin nota (marcados como retirado)
+ *                     actualizados:
+ *                       type: number
+ *                       description: Registros que se actualizaron
+ *                 message:
+ *                   type: string
+ *                   example: "Estados actualizados según nota ponderada"
+ *       404:
+ *         description: Aula no encontrada
+ */
+router.post('/aulaalumnos/actualizar-estados-aula/:id_aula', aulaalumnosController.actualizarEstadosPorNotaPonderada);
+
 module.exports = router;

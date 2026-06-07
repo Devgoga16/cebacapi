@@ -16,6 +16,13 @@ const AulaAlumnoSchema = new mongoose.Schema({
     enum: ['aprobado', 'reprobado', 'en curso', 'retirado', 'inscrito', 'pendiente'],
     default: 'en curso'
   },
+  nota_ponderada: {
+    type: Number,
+    required: false,
+    min: 0,
+    max: 100,
+    default: null
+  },
   carta_pastoral: {
     data: {
       type: String, // base64
