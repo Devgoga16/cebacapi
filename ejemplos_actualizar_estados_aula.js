@@ -1,10 +1,12 @@
 /**
  * Ejemplo de uso del endpoint para actualizar estados según nota ponderada
  * 
- * Este endpoint actualiza automáticamente el estado de los alumnos de un aula:
+ * Este endpoint actualiza automáticamente el estado de los alumnos de un aula
+ * y marca el aula como terminada:
  * - Si nota_ponderada >= 11 → estado = "aprobado"
  * - Si nota_ponderada < 11 → estado = "reprobado"
  * - Si nota_ponderada es null → estado = "retirado"
+ * - Aula → estado = "terminada"
  */
 
 const BASE_URL = 'http://localhost:3000/api';
@@ -35,6 +37,7 @@ async function actualizarEstadosAula() {
   console.log(`Reprobados (nota < 11): ${result.data.reprobados}`);
   console.log(`Retirados (sin nota): ${result.data.retirados}`);
   console.log(`Registros actualizados: ${result.data.actualizados}`);
+  console.log(`Estado del aula: ${result.data.aula_estado}`);
   
   return result;
 }

@@ -283,6 +283,7 @@ exports.inscribirAulaAlumno = async (id) => {
 
 /**
  * Actualiza el estado de los alumnos de un aula basándose en su nota_ponderada
+ * También cambia el estado del aula a "terminada"
  * Si nota_ponderada >= 11 → estado = 'aprobado'
  * Si nota_ponderada < 11 → estado = 'reprobado'
  * Si nota_ponderada es null → estado = 'retirado'
@@ -303,12 +304,19 @@ exports.actualizarEstadosPorNotaPonderada = async (id_aula) => {
     const alumnosAula = await AulaAlumno.find({ id_aula }).lean();
 
     if (alumnosAula.length === 0) {
+      // Aun sin alumnos, actualizar el estado del aula a terminada
+      await Aula.updateOne(
+        { _id: id_aula },
+        { $set: { estado: 'terminada' } }
+      );
+
       return {
         total: 0,
         aprobados: 0,
         reprobados: 0,
         retirados: 0,
         actualizados: 0,
+        aula_estado: 'terminada',
       };
     }
 
@@ -345,15 +353,66 @@ exports.actualizarEstadosPorNotaPonderada = async (id_aula) => {
       }
     }
 
+    // Actualizar el estado del aula a "terminada"
+    await Aula.updateOne(
+      { _id: id_aula },
+      { $set: { estado: 'terminada' } }
+    );
+
     return {
       total: alumnosAula.length,
       aprobados,
       reprobados,
       retirados,
       actualizados,
+      aula_estado: 'terminada',
     };
   } catch (error) {
     console.error('Error al actualizar estados por nota ponderada:', error);
+    throw error;
+  }
+};
+
+/**
+ * Obtiene todas las solicitudes de retiro con información completa
+ * Busca en aulaalumno donde estado = 'solicitud de retiro'
+ * y retorna datos del alumno, profesor, curso y ciclo
+ * @returns {Array} Lista de solicitudes de retiro con datos completos
+ */
+exports.getSolicitudesDeRetiro = async () => {
+  try {
+    const solicitudes = await AulaAlumno.find({ estado: 'solicitud de retiro' })
+      .populate('id_alumno', 'nombres apellido_paterno apellido_materno') // Datos del alumno
+      .populate({
+        path: 'id_aula',
+        populate: [
+          { path: 'id_profesor', select: 'nombres apellido_paterno apellido_materno' }, // Datos del profesor
+          { path: 'id_curso', select: 'nombre_curso' }, // Nombre del curso
+          { path: 'id_ciclo', select: 'nombre_ciclo' } // Nombre del ciclo
+        ]
+      })
+      .lean();
+
+    // Formatear la respuesta con los datos solicitados
+    const solicitudesFormateadas = solicitudes.map(solicitud => {
+      const alumno = solicitud.id_alumno;
+      const aula = solicitud.id_aula;
+      const profesor = aula?.id_profesor;
+      const curso = aula?.id_curso;
+      const ciclo = aula?.id_ciclo;
+
+      return {
+        id_aulaalumno: solicitud._id,
+        nombre_alumno: alumno ? `${alumno.nombres} ${alumno.apellido_paterno} ${alumno.apellido_materno}`.trim() : 'N/A',
+        nombre_profesor: profesor ? `${profesor.nombres} ${profesor.apellido_paterno} ${profesor.apellido_materno}`.trim() : 'N/A',
+        nombre_curso: curso?.nombre_curso || 'N/A',
+        nombre_ciclo: ciclo?.nombre_ciclo || 'N/A'
+      };
+    });
+
+    return solicitudesFormateadas;
+  } catch (error) {
+    console.error('Error al obtener solicitudes de retiro:', error);
     throw error;
   }
 };

@@ -95,3 +95,12 @@ exports.actualizarEstadosPorNotaPonderada = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getSolicitudesDeRetiro = async (req, res, next) => {
+  try {
+    const solicitudes = await aulaalumnosService.getSolicitudesDeRetiro();
+    sendResponse(res, { data: solicitudes, message: 'Solicitudes de retiro obtenidas exitosamente' });
+  } catch (err) {
+    next(err);
+  }
+};

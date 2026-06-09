@@ -74,6 +74,50 @@ router.get('/aulaalumnos', aulaalumnosController.getAllAulaAlumnos);
 
 /**
  * @swagger
+ * /aulaalumnos/solicitudes-retiro:
+ *   get:
+ *     summary: Obtiene todas las solicitudes de retiro con información completa
+ *     description: Retorna todos los registros de AulaAlumno con estado 'solicitud de retiro', incluyendo datos del alumno, profesor, curso y ciclo
+ *     tags: [AulaAlumnos]
+ *     responses:
+ *       200:
+ *         description: Lista de solicitudes de retiro
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                   example: "success"
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id_aulaalumno:
+ *                         type: string
+ *                         description: ID del registro AulaAlumno
+ *                       nombre_alumno:
+ *                         type: string
+ *                         description: Nombre completo del alumno
+ *                       nombre_profesor:
+ *                         type: string
+ *                         description: Nombre completo del profesor
+ *                       nombre_curso:
+ *                         type: string
+ *                         description: Nombre del curso
+ *                       nombre_ciclo:
+ *                         type: string
+ *                         description: Nombre del ciclo
+ *                 message:
+ *                   type: string
+ *                   example: "Solicitudes de retiro obtenidas exitosamente"
+ */
+router.get('/aulaalumnos/solicitudes-retiro', aulaalumnosController.getSolicitudesDeRetiro);
+
+/**
+ * @swagger
  * /aulaalumnos/{id}:
  *   get:
  *     summary: Obtiene un AulaAlumno por id
@@ -418,8 +462,8 @@ router.put('/aulaalumnos/aprobar/:id', aulaalumnosController.inscribirAulaAlumno
  * @swagger
  * /aulaalumnos/actualizar-estados-aula/{id_aula}:
  *   post:
- *     summary: Actualiza los estados de alumnos según su nota ponderada
- *     description: Cambia el estado a 'aprobado' si nota >= 11, 'reprobado' si < 11, o 'retirado' si no tiene nota.
+ *     summary: Actualiza los estados de alumnos según su nota ponderada y finaliza el aula
+ *     description: Cambia el estado a 'aprobado' si nota >= 11, 'reprobado' si < 11, o 'retirado' si no tiene nota. También cambia el estado del aula a 'terminada'.
  *     tags: [AulaAlumnos]
  *     parameters:
  *       - in: path
@@ -457,6 +501,10 @@ router.put('/aulaalumnos/aprobar/:id', aulaalumnosController.inscribirAulaAlumno
  *                     actualizados:
  *                       type: number
  *                       description: Registros que se actualizaron
+ *                     aula_estado:
+ *                       type: string
+ *                       description: Estado del aula (siempre 'terminada')
+ *                       example: "terminada"
  *                 message:
  *                   type: string
  *                   example: "Estados actualizados según nota ponderada"
