@@ -1,6 +1,56 @@
 const AulaAlumno = require('../models/aulaalumno');
 const Aula = require('../models/aula');
+const Persona = require('../models/persona');
+const Ciclo = require('../models/ciclo');
+const Curso = require('../models/curso');
 const { compressBase64Image } = require('../utils/image');
+const https = require('https');
+const http = require('http');
+
+/**
+ * Envía un correo electrónico usando el servicio de notificaciones centralizado.
+ * Fire-and-forget: los errores se loguean pero no interrumpen el flujo principal.
+ * @param {string} to - Correo destino
+ * @param {string} subject - Asunto del correo
+ * @param {string} html - Cuerpo HTML del correo
+ */
+function sendEmail(to, subject, html) {
+  if (!to) return;
+  const baseUrl = process.env.NOTIFICATIONS_API_URL || 'https://bot-cebac.iglesia-360.com/api';
+  const apiKey = process.env.NOTIFICATIONS_API_KEY || '';
+  const body = JSON.stringify({ to, subject, html });
+
+  const url = new URL(`${baseUrl}/email/send`);
+  const isHttps = url.protocol === 'https:';
+  const options = {
+    hostname: url.hostname,
+    port: url.port || (isHttps ? 443 : 80),
+    path: url.pathname,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(body),
+      'accept': '*/*',
+      'x-api-key': apiKey,
+    },
+  };
+
+  const transport = isHttps ? https : http;
+  const req = transport.request(options, (res) => {
+    let data = '';
+    res.on('data', (chunk) => { data += chunk; });
+    res.on('end', () => {
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        console.error(`[sendEmail] Respuesta no exitosa (${res.statusCode}):`, data);
+      }
+    });
+  });
+  req.on('error', (err) => {
+    console.error('[sendEmail] Error al enviar correo de bienvenida:', err?.message || err);
+  });
+  req.write(body);
+  req.end();
+}
 
 exports.getAllAulaAlumnos = async () => {
   return await AulaAlumno.find().populate('id_aula id_alumno');
@@ -238,6 +288,128 @@ exports.bulkCreateAulaAlumnos = async (id_alumno, id_aulas, additionalData = {})
     inserted = result.map(d => String(d._id));
   }
 
+  // ── Correo de bienvenida (fire-and-forget) ──────────────────────────────────
+  // Solo se envía si hubo inserciones nuevas
+  if (inserted.length > 0) {
+    try {
+
+      console.log("entra al correo")
+      // 1. Email del alumno
+      const personaDoc = await Persona.findById(id_alumno).select('nombres apellido_paterno email').lean();
+      const emailDestino = personaDoc?.email;
+      const nombreAlumno = personaDoc
+        ? `${personaDoc.nombres} ${personaDoc.apellido_paterno}`.trim()
+        : 'Estudiante';
+      console.log("datos", personaDoc)
+
+      if (emailDestino) {
+        // 2. Datos de las aulas insertadas con curso, ciclo y profesor
+        const aulasInscritas = await Aula.find({ _id: { $in: toInsertIds } })
+          .populate('id_curso', 'nombre_curso')
+          .populate('id_ciclo', 'nombre_ciclo')
+          .populate('id_profesor', 'nombres apellido_paterno')
+          .lean();
+
+        // 3. Nombre del ciclo (tomamos el del primer aula con ciclo definido)
+        const cicloNombre = aulasInscritas.find(a => a.id_ciclo?.nombre_ciclo)?.id_ciclo?.nombre_ciclo || 'Nuevo Ciclo';
+
+        // 4. Tarjetas de cada aula: curso, profesor, día y horario
+        const aulasHtml = aulasInscritas.length > 0
+          ? aulasInscritas.map(a => {
+            const nombreCurso = a.id_curso?.nombre_curso || 'Curso';
+            const nombreProf = a.id_profesor
+              ? `${a.id_profesor.nombres} ${a.id_profesor.apellido_paterno}`.trim()
+              : 'Por asignar';
+            const dia = a.dia || '—';
+            const horaInicio = a.hora_inicio || '—';
+            const horaFin = a.hora_fin || '—';
+            return `
+              <div style="background:#ffffff;border:1px solid #dde3ef;border-radius:8px;padding:16px 20px;margin-bottom:12px;">
+                <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a3a6e;">${nombreCurso}</p>
+                <table cellpadding="0" cellspacing="0" style="width:100%;">
+                  <tr>
+                    <td style="width:20px;vertical-align:top;padding-top:2px;">
+                      <span style="display:inline-block;width:16px;height:16px;background:#2e6bbf;border-radius:50%;text-align:center;line-height:16px;color:#fff;font-size:10px;">&#128100;</span>
+                    </td>
+                    <td style="padding-left:8px;font-size:13px;color:#555;"><strong>Profesor:</strong> ${nombreProf}</td>
+                  </tr>
+                  <tr style="margin-top:4px;">
+                    <td style="width:20px;vertical-align:top;padding-top:6px;">
+                      <span style="display:inline-block;width:16px;height:16px;background:#2e6bbf;border-radius:50%;text-align:center;line-height:16px;color:#fff;font-size:10px;">&#128197;</span>
+                    </td>
+                    <td style="padding-left:8px;padding-top:4px;font-size:13px;color:#555;"><strong>Día:</strong> ${dia}</td>
+                  </tr>
+                  <tr>
+                    <td style="width:20px;vertical-align:top;padding-top:6px;">
+                      <span style="display:inline-block;width:16px;height:16px;background:#2e6bbf;border-radius:50%;text-align:center;line-height:16px;color:#fff;font-size:10px;">&#128336;</span>
+                    </td>
+                    <td style="padding-left:8px;padding-top:4px;font-size:13px;color:#555;"><strong>Horario:</strong> ${horaInicio} – ${horaFin}</td>
+                  </tr>
+                </table>
+              </div>`;
+          }).join('')
+          : '<p style="color:#666;">Sin cursos registrados</p>';
+
+        const htmlCorreo = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bienvenido al ${cicloNombre}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f6f9;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f9;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+          <!-- Encabezado -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#1a3a6e 0%,#2e6bbf 100%);padding:36px 40px;text-align:center;">
+              <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.5px;">¡Bienvenido al ${cicloNombre}!</h1>
+              <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:15px;">CEBAC — Centro de Enseñanza Bíblica Alianza Comas</p>
+            </td>
+          </tr>
+          <!-- Cuerpo -->
+          <tr>
+            <td style="padding:36px 40px;">
+              <p style="margin:0 0 16px;font-size:16px;color:#222;">Hola, <strong>${nombreAlumno}</strong>,</p>
+              <p style="margin:0 0 24px;font-size:15px;color:#444;line-height:1.6;">
+                Tu inscripción ha sido completada exitosamente. A continuación encontrarás el resumen de los cursos en los que te has matriculado para este ciclo:
+              </p>
+              <!-- Tarjetas de cursos -->
+              <div style="margin-bottom:28px;">
+                <p style="margin:0 0 14px;font-size:14px;font-weight:700;color:#1a3a6e;text-transform:uppercase;letter-spacing:0.5px;">Cursos Matriculados</p>
+                ${aulasHtml}
+              </div>
+              <p style="margin:0 0 8px;font-size:15px;color:#444;line-height:1.6;">
+                Si tienes alguna duda o consulta, no dudes en comunicarte con nosotros.
+              </p>
+              <p style="margin:0;font-size:15px;color:#444;">¡Que Dios bendiga tu preparación!</p>
+            </td>
+          </tr>
+          <!-- Pie -->
+          <tr>
+            <td style="background:#f8fafc;padding:24px 40px;text-align:center;border-top:1px solid #e8ecf0;">
+              <p style="margin:0;font-size:13px;color:#999;">© ${new Date().getFullYear()} CEBAC — Centro de Estudios Bíblicos. Todos los derechos reservados.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+        sendEmail(emailDestino, `Bienvenido al ${cicloNombre}`, htmlCorreo);
+      }
+    } catch (emailErr) {
+      // El error de correo nunca debe afectar la respuesta de inscripción
+      console.error('[bulkCreateAulaAlumnos] Error preparando correo de bienvenida:', emailErr?.message || emailErr);
+    }
+  }
+  // ───────────────────────────────────────────────────────────────────────────
+
   return {
     insertedCount: inserted.length,
     insertedIds: inserted,
@@ -328,7 +500,7 @@ exports.actualizarEstadosPorNotaPonderada = async (id_aula) => {
     // Actualizar cada alumno según su nota_ponderada
     for (const alumno of alumnosAula) {
       let nuevoEstado;
-      
+
       if (alumno.nota_ponderada === null || alumno.nota_ponderada === undefined) {
         // Sin nota → retirado
         nuevoEstado = 'retirado';
@@ -342,7 +514,7 @@ exports.actualizarEstadosPorNotaPonderada = async (id_aula) => {
         nuevoEstado = 'reprobado';
         reprobados++;
       }
-      
+
       // Solo actualizar si el estado cambió
       if (alumno.estado !== nuevoEstado) {
         await AulaAlumno.updateOne(
