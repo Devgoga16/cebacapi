@@ -3,13 +3,14 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Herramientas necesarias para bcrypt y sharp (módulos con código nativo)
-RUN apk add --no-cache python3 make g++ vips-dev
+# python3/make/g++ son requeridos por bcrypt para compilar su addon nativo
+# sharp >=0.30 ya incluye libvips empaquetado, no necesita vips-dev
+RUN apk add --no-cache python3 make g++
 
 # Copiar archivos de dependencias
 COPY package*.json ./
 
-# Instalar dependencias de producción (se recompilan para Linux aquí)
+# Instalar dependencias de producción (recompila bcrypt para Linux aquí)
 RUN npm ci --only=production
 
 # Etapa 2: Production
@@ -17,14 +18,11 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Librerías de runtime para sharp y bcrypt
-RUN apk add --no-cache libvips libstdc++
-
 # Crear usuario no-root para seguridad
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Copiar dependencias desde builder
+# Copiar dependencias compiladas para Linux desde el builder
 COPY --from=builder /app/node_modules ./node_modules
 
 # Copiar código fuente
@@ -40,7 +38,7 @@ EXPOSE 3000
 ENV NODE_ENV=production \
     PORT=3000
 
-# Health check (apunta al endpoint /health añadido en app.js)
+# Health check (apunta al endpoint /health en app.js)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
