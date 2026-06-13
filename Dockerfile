@@ -1,55 +1,48 @@
-# =====================================================================
-# Dockerfile — cebacapi (Express + MongoDB)
-# =====================================================================
-
-# ── Stage 1: Instalar dependencias de producción ──────────────────────
-FROM node:22-alpine AS deps
+# Etapa 1: Build (con herramientas para compilar módulos nativos)
+FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copiar manifiestos de dependencias
-COPY package.json package-lock.json ./
+# Herramientas necesarias para bcrypt y sharp (módulos con código nativo)
+RUN apk add --no-cache python3 make g++ vips-dev
 
-# Instalar solo dependencias de producción
-# (sharp necesita rebuild nativo, --ignore-scripts no aplica aquí)
-RUN npm ci --omit=dev
+# Copiar archivos de dependencias
+COPY package*.json ./
 
-# ── Stage 2: Imagen final de producción ───────────────────────────────
-FROM node:22-alpine AS runner
+# Instalar dependencias de producción (se recompilan para Linux aquí)
+RUN npm ci --only=production
 
-# Instalar librerías nativas requeridas por sharp y bcrypt
-RUN apk add --no-cache \
-    libc6-compat \
-    vips-dev
+# Etapa 2: Production
+FROM node:18-alpine
 
 WORKDIR /app
 
-# Copiar node_modules ya instalados
-COPY --from=deps /app/node_modules ./node_modules
+# Librerías de runtime para sharp y bcrypt
+RUN apk add --no-cache libvips libstdc++
 
-# Copiar código fuente de la API
-COPY src ./src
+# Crear usuario no-root para seguridad
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
 
-# Copiar archivos de configuración raíz
-COPY package.json ./
+# Copiar dependencias desde builder
+COPY --from=builder /app/node_modules ./node_modules
 
-# Crear usuario sin privilegios para mayor seguridad
-RUN addgroup --system --gid 1001 nodejs \
- && adduser  --system --uid 1001 apiuser \
- && chown -R apiuser:nodejs /app
+# Copiar código fuente
+COPY --chown=nodejs:nodejs . .
 
-USER apiuser
+# Cambiar a usuario no-root
+USER nodejs
 
-# Puerto expuesto (configurable por variable de entorno)
+# Exponer puerto
 EXPOSE 3000
 
-# Variables de entorno por defecto (sobreescribir en runtime)
+# Variables de entorno por defecto
 ENV NODE_ENV=production \
     PORT=3000
 
-# Healthcheck: verifica que el servidor responda
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-  CMD wget -qO- http://localhost:${PORT}/api/health || exit 1
+# Health check (apunta al endpoint /health añadido en app.js)
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Comando de inicio
+# Comando para iniciar la aplicación
 CMD ["node", "src/server.js"]
