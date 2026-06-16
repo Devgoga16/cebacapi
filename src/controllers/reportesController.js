@@ -112,7 +112,6 @@ const descargarReporteCicloCompleto = async (req, res, next) => {
     // Enviar el buffer
     res.send(zipBuffer);
     
-    console.log(`✓ ZIP enviado exitosamente: ${filename}`);
 
   } catch (error) {
     console.error('Error en descargarReporteCicloCompleto:', error);

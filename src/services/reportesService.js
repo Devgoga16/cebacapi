@@ -679,7 +679,6 @@ const generarReporteCicloCompleto = async (idCiclo) => {
             // Agregar al ZIP
             zip.addFile(rutaCompleta, Buffer.from(buffer));
             
-            console.log(`✓ Reporte generado: ${rutaCompleta}`);
           } catch (error) {
             console.error(`Error generando reporte para aula ${aula._id}:`, error.message);
             // Continuar con las demás aulas aunque una falle

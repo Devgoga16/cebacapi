@@ -293,14 +293,12 @@ exports.bulkCreateAulaAlumnos = async (id_alumno, id_aulas, additionalData = {})
   if (inserted.length > 0) {
     try {
 
-      console.log("entra al correo")
       // 1. Email del alumno
       const personaDoc = await Persona.findById(id_alumno).select('nombres apellido_paterno email').lean();
       const emailDestino = personaDoc?.email;
       const nombreAlumno = personaDoc
         ? `${personaDoc.nombres} ${personaDoc.apellido_paterno}`.trim()
         : 'Estudiante';
-      console.log("datos", personaDoc)
 
       if (emailDestino) {
         // 2. Datos de las aulas insertadas con curso, ciclo y profesor

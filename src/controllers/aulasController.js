@@ -12,7 +12,6 @@ exports.getAllAulas = async (req, res, next) => {
 
 exports.getAulaById = async (req, res, next) => {
   try {
-    console.log('ID recibido en getAulaById:', req.params.id); // DEBUG
     const aula = await aulasService.getAulaById(req.params.id);
     if (!aula) return sendResponse(res, { state: 'failed', data: null, message: 'Aula no encontrada', action_code: 404 });
     sendResponse(res, { data: aula });
@@ -53,7 +52,6 @@ function normalizeAulaFields(body) {
 exports.updateAula = async (req, res, next) => {
   try {
     const normalizedBody = normalizeAulaFields({ ...req.body });
-    console.log('Body normalizado en updateAula:', normalizedBody); // DEBUG
     const errors = validateAulaInput(normalizedBody);
     if (errors.length) {
       return sendResponse(res, { state: 'failed', data: null, message: errors.join(', '), action_code: 400 });

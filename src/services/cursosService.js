@@ -91,8 +91,6 @@ exports.getMallaCurricularPorPersona = async (id_persona, options = {}) => {
   const aulas = await Aula.find({ id_curso: { $in: cursoIds } })
     .select('_id id_curso');
 
-  // Opcional: log de depuración que existía antes
-  console.log('aulassssss', aulas);
 
   const allAulaIds = aulas.map(a => a._id);
 

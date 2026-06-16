@@ -59,7 +59,6 @@ exports.aprobarInscripcion = async (idInscripcion) => {
 
 // Rechaza una inscripción: actualiza estado a 'Rechazado' y guarda observación si se envía
 exports.rechazarInscripcion = async (idInscripcion, observacion = '') => {
-  console.log(`Rechazando inscripción ${idInscripcion} con observación:`, observacion);
   const insc = await Inscripcion.findById(idInscripcion);
   if (!insc) {
     const err = new Error('Inscripción no encontrada');

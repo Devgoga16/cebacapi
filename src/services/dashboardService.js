@@ -38,7 +38,6 @@ exports.getAlumnoDashboard = async (id_persona) => {
   // (usa getFullYear()/getMonth()/getDate() en lugar de getUTC* para no saltar de día)
   const hoyUTC = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
 
-  console.log('Fecha hoy UTC:', hoyUTC);
 
   let rol = await Rol.findOne({ nombre_rol: "estudiante" });
 
