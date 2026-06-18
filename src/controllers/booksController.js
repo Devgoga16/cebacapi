@@ -19,6 +19,7 @@ exports.crearLibro = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Libro "${req.body.title || req.body.titulo || ''}" creado`,
       payload: { ...req.body, imageFile: undefined },
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -44,6 +45,7 @@ exports.agregarStock = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Stock de ${cantidad} unidades agregado al libro ${req.params.id}`,
       payload: { cantidad },
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -110,6 +112,7 @@ exports.comprarLibros = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Compra de libros registrada — comprador: ${body.buyer || body.comprador || 'desconocido'}`,
       payload: { ...body, voucherFile: undefined },
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -135,6 +138,7 @@ exports.entregarLibros = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Venta ${req.params.id} marcada como entregada por ${deliveredBy || 'desconocido'}`,
       payload: { deliveredBy },
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -192,6 +196,7 @@ exports.cambiarEstadoVenta = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Estado de venta ${req.params.id} cambiado a "${status}"`,
       payload: { status },
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -241,6 +246,7 @@ exports.validarVoucher = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Voucher de venta ${id} ${action === 'aprobar' ? 'aprobado' : 'rechazado'} por ${validated_by || 'desconocido'}`,
       payload: { validated_by, rejection_reason },
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -273,6 +279,7 @@ exports.actualizarImagenLibro = async (req, res, next) => {
       id_entidad: id,
       actor: req.actor,
       descripcion: `Imagen del libro ${id} actualizada`,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -296,6 +303,7 @@ exports.eliminarImagenLibro = async (req, res, next) => {
       id_entidad: id,
       actor: req.actor,
       descripcion: `Imagen del libro ${id} eliminada`,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });

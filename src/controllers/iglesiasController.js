@@ -31,6 +31,7 @@ exports.createIglesia = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Iglesia "${req.body.nombre_iglesia}" creada`,
       payload: req.body,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -51,6 +52,7 @@ exports.updateIglesia = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Iglesia ${req.params.id} actualizada`,
       payload: req.body,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -70,6 +72,7 @@ exports.deleteIglesia = async (req, res, next) => {
       id_entidad: req.params.id,
       actor: req.actor,
       descripcion: `Iglesia ${req.params.id} eliminada`,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });

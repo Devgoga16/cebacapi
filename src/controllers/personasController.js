@@ -40,6 +40,7 @@ exports.createPersona = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Persona "${req.body.nombres} ${req.body.apellido_paterno}" creada`,
       payload: { ...req.body, imagen: undefined },
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -60,6 +61,7 @@ exports.updatePersona = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Persona ${req.params.id} actualizada`,
       payload: { ...req.body, imagen: undefined },
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -79,6 +81,7 @@ exports.deletePersona = async (req, res, next) => {
       id_entidad: req.params.id,
       actor: req.actor,
       descripcion: `Persona ${req.params.id} eliminada`,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -109,6 +112,7 @@ exports.importarPersonasExcel = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Importación masiva de personas desde Excel — ${data?.insertados || 0} insertadas, ${data?.errores || 0} errores`,
       payload: { insertados: data?.insertados, errores: data?.errores },
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });

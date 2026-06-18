@@ -40,6 +40,7 @@ exports.createMinisterio = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Ministerio "${req.body.nombre_ministerio}" creado`,
       payload: req.body,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -60,6 +61,7 @@ exports.updateMinisterio = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Ministerio ${req.params.id} actualizado`,
       payload: req.body,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -79,6 +81,7 @@ exports.deleteMinisterio = async (req, res, next) => {
       id_entidad: req.params.id,
       actor: req.actor,
       descripcion: `Ministerio ${req.params.id} eliminado`,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });

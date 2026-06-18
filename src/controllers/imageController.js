@@ -43,6 +43,7 @@ const imageController = {
         actor: req.actor,
         descripcion: `Imagen "${req.file.originalname}" subida desde archivo`,
         payload: { filename: req.file.originalname, size: req.file.size, url: result?.url },
+        request_body: req.body,
         ip: req.ip,
         user_agent: req.headers['user-agent'],
       });
@@ -86,6 +87,7 @@ const imageController = {
         actor: req.actor,
         descripcion: `Imagen "${filename || 'image.jpg'}" subida desde base64`,
         payload: { filename: filename || 'image.jpg', url: result?.url },
+        request_body: req.body,
         ip: req.ip,
         user_agent: req.headers['user-agent'],
       });
@@ -136,6 +138,7 @@ const imageController = {
         actor: req.actor,
         descripcion: `Imagen subida desde URL ${url}`,
         payload: { url, resultado: result?.url },
+        request_body: req.body,
         ip: req.ip,
         user_agent: req.headers['user-agent'],
       });
@@ -216,6 +219,7 @@ const imageController = {
           exitosas: results.map((r) => r.filename),
           fallidas: errors,
         },
+        request_body: req.body,
         ip: req.ip,
         user_agent: req.headers['user-agent'],
       });

@@ -11,6 +11,7 @@ const AuditLogSchema = new mongoose.Schema(
     },
     descripcion: { type: String, default: '' },
     payload: { type: mongoose.Schema.Types.Mixed, default: null },
+    request_body: { type: mongoose.Schema.Types.Mixed, default: null },
     ip: { type: String, default: null },
     user_agent: { type: String, default: null },
   },

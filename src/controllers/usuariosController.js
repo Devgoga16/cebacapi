@@ -17,6 +17,7 @@ exports.validarUsuario = async (req, res, next) => {
       id_entidad: req.params.iduser,
       actor: req.actor,
       descripcion: `Cuenta de usuario "${result.usuario.username}" validada`,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -108,6 +109,7 @@ exports.createUsuario = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Usuario "${req.body.username}" creado`,
       payload: { username: req.body.username, roles: req.body.roles },
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -128,6 +130,7 @@ exports.updateUsuario = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Usuario ${req.params.id} actualizado`,
       payload: { username: req.body.username, roles: req.body.roles },
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -147,6 +150,7 @@ exports.deleteUsuario = async (req, res, next) => {
       id_entidad: req.params.id,
       actor: req.actor,
       descripcion: `Usuario ${req.params.id} eliminado`,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -166,6 +170,7 @@ exports.createUsuarioYPersona = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Usuario "${req.body.username}" y Persona creados en conjunto`,
       payload: { username: req.body.username, roles: req.body.roles },
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });

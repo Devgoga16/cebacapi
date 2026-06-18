@@ -30,6 +30,7 @@ exports.createRole = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Rol "${req.body.nombre_rol || req.body.nombre}" creado`,
       payload: req.body,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -50,6 +51,7 @@ exports.updateRole = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Rol ${req.params.id} actualizado`,
       payload: req.body,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -69,6 +71,7 @@ exports.deleteRole = async (req, res, next) => {
       id_entidad: req.params.id,
       actor: req.actor,
       descripcion: `Rol ${req.params.id} eliminado`,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });

@@ -58,6 +58,7 @@ exports.createAnuncio = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Anuncio de profesor creado para aula ${req.body.id_aula}`,
       payload: req.body,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -86,6 +87,7 @@ exports.updateAnuncio = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Anuncio de profesor ${id} actualizado`,
       payload: req.body,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -115,6 +117,7 @@ exports.deleteAnuncio = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Anuncio de profesor ${id} eliminado por ${id_profesor}`,
       payload: { id_profesor },
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });

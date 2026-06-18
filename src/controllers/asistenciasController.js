@@ -21,6 +21,7 @@ exports.tomarAsistencia = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Asistencia del ${fecha || 'fecha no especificada'} registrada por ${tomado_por || 'desconocido'} — ${(items || []).length} alumnos`,
       payload: { fecha, tomado_por, total: (items || []).length },
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });

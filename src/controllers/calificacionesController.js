@@ -20,6 +20,7 @@ exports.registrarCalificaciones = async (req, res, next) => {
       actor: req.actor,
       descripcion: `${(items || []).length} calificaciones registradas por ${registrado_por || 'desconocido'}`,
       payload: { total: (items || []).length, registrado_por },
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -53,6 +54,7 @@ exports.deleteCalificacion = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Calificación eliminada — aula: ${id_aula}, alumno: ${id_alumno}, tipo: ${id_tipo_calificacion}`,
       payload: { id_aula, id_alumno, id_tipo_calificacion },
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -71,6 +73,7 @@ exports.recalcularPromediosPonderadosAula = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Promedios ponderados recalculados para el aula ${id_aula}`,
       payload: resultado,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });

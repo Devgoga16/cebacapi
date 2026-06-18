@@ -31,6 +31,7 @@ exports.createInscripcion = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Inscripción creada para alumno ${req.body.id_alumno} en aula ${req.body.id_aula}`,
       payload: req.body,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -51,6 +52,7 @@ exports.updateInscripcion = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Inscripción ${req.params.id} actualizada`,
       payload: req.body,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -70,6 +72,7 @@ exports.deleteInscripcion = async (req, res, next) => {
       id_entidad: req.params.id,
       actor: req.actor,
       descripcion: `Inscripción ${req.params.id} eliminada`,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -89,6 +92,7 @@ exports.aprobarInscripcion = async (req, res, next) => {
       id_entidad: id,
       actor: req.actor,
       descripcion: `Inscripción ${id} aprobada`,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -110,6 +114,7 @@ exports.rechazarInscripcion = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Inscripción ${id} rechazada — observación: ${observacion || 'sin observación'}`,
       payload: { observacion },
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });

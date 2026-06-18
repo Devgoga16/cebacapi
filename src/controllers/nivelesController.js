@@ -31,6 +31,7 @@ exports.createNivel = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Nivel "${req.body.nombre_nivel || req.body.nombre}" creado`,
       payload: req.body,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -51,6 +52,7 @@ exports.updateNivel = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Nivel ${req.params.id} actualizado`,
       payload: req.body,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -70,6 +72,7 @@ exports.deleteNivel = async (req, res, next) => {
       id_entidad: req.params.id,
       actor: req.actor,
       descripcion: `Nivel ${req.params.id} eliminado`,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });

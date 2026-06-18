@@ -31,6 +31,7 @@ exports.createAulaAlumno = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Alumno ${req.body.id_alumno} asignado al aula ${req.body.id_aula}`,
       payload: req.body,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -51,6 +52,7 @@ exports.updateAulaAlumno = async (req, res, next) => {
       actor: req.actor,
       descripcion: `AulaAlumno ${req.params.id} actualizado — estado: ${req.body.estado || 'sin cambio'}`,
       payload: req.body,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -70,6 +72,7 @@ exports.deleteAulaAlumno = async (req, res, next) => {
       id_entidad: req.params.id,
       actor: req.actor,
       descripcion: `AulaAlumno ${req.params.id} eliminado`,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -101,6 +104,7 @@ exports.bulkCreateAulaAlumnos = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Alumno ${id_alumno} inscrito en ${(id_aulas || []).length} aulas de forma masiva`,
       payload: { id_alumno, id_aulas },
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -119,6 +123,7 @@ exports.inscribirAulaAlumno = async (req, res, next) => {
       id_entidad: req.params.id,
       actor: req.actor,
       descripcion: `AulaAlumno ${req.params.id} marcado como inscrito`,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -139,6 +144,7 @@ exports.actualizarEstadosPorNotaPonderada = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Estados del aula ${id_aula} actualizados automáticamente según nota ponderada`,
       payload: resultado,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });

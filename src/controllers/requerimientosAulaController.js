@@ -18,6 +18,7 @@ exports.crear = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Requerimiento "${req.body.nombre}" creado para aula ${req.body.id_aula}`,
       payload: reqData,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -51,6 +52,7 @@ exports.marcarRevisado = async (req, res, next) => {
       id_entidad: req.params.id,
       actor: req.actor,
       descripcion: `Requerimiento ${req.params.id} marcado como revisado`,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -73,6 +75,7 @@ exports.atender = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Requerimiento ${req.params.id} atendido por ${atendido_por || 'desconocido'}`,
       payload: { atendido_por, tiene_evidencia: !!evidencia },
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });

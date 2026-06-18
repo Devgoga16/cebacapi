@@ -31,6 +31,7 @@ exports.createCiclo = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Ciclo "${newCiclo.nombre_ciclo}" (${newCiclo.año}) creado`,
       payload: req.body,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -51,6 +52,7 @@ exports.updateCiclo = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Ciclo ${req.params.id} actualizado`,
       payload: req.body,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -70,6 +72,7 @@ exports.deleteCiclo = async (req, res, next) => {
       id_entidad: req.params.id,
       actor: req.actor,
       descripcion: `Ciclo ${req.params.id} eliminado`,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });

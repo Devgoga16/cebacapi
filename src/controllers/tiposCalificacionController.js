@@ -28,6 +28,7 @@ exports.setTiposCalificacion = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Tipos de calificación configurados para el aula ${idAula} — ${tipos.length} tipos`,
       payload: { idAula, tipos },
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -75,6 +76,7 @@ exports.deleteTiposCalificacionByAula = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Tipos de calificación del aula ${idAula} eliminados`,
       payload: { deletedCount: result.deletedCount },
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -105,6 +107,7 @@ exports.updateTipoCalificacion = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Tipo de calificación ${idTipo} actualizado`,
       payload: updateData,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });

@@ -31,6 +31,7 @@ exports.createCurso = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Curso "${req.body.nombre_curso}" creado`,
       payload: req.body,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -51,6 +52,7 @@ exports.updateCurso = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Curso ${req.params.id} actualizado`,
       payload: req.body,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -70,6 +72,7 @@ exports.deleteCurso = async (req, res, next) => {
       id_entidad: req.params.id,
       actor: req.actor,
       descripcion: `Curso ${req.params.id} eliminado`,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });

@@ -36,6 +36,7 @@ exports.createAula = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Aula creada para curso ${req.body.id_curso} en ciclo ${req.body.id_ciclo}`,
       payload: req.body,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -73,6 +74,7 @@ exports.updateAula = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Aula ${req.params.id} actualizada`,
       payload: normalizedBody,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -92,6 +94,7 @@ exports.deleteAula = async (req, res, next) => {
       id_entidad: req.params.id,
       actor: req.actor,
       descripcion: `Aula ${req.params.id} eliminada`,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -114,6 +117,7 @@ exports.deleteAulaCompleto = async (req, res, next) => {
       actor: req.actor,
       descripcion: `Aula ${req.params.id} eliminada con todos sus registros asociados`,
       payload: result.deletedInfo,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
@@ -163,6 +167,7 @@ exports.iniciarAula = async (req, res, next) => {
       id_entidad: id,
       actor: req.actor,
       descripcion: `Aula ${id} marcada como iniciada`,
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });

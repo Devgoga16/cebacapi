@@ -13,6 +13,7 @@ exports.login = async (req, res, next) => {
         actor: { id_usuario: null, username },
         descripcion: `Intento de login fallido para usuario "${username}"`,
         payload: { username },
+        request_body: req.body,
         ip: req.ip,
         user_agent: req.headers['user-agent'],
       });
@@ -32,6 +33,7 @@ exports.login = async (req, res, next) => {
           ? `${result.persona.nombres || ''} ${result.persona.apellido_paterno || ''} ${result.persona.apellido_materno || ''}`.trim()
           : null,
       },
+      request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
