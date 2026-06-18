@@ -1,20 +1,31 @@
 const booksService = require('../services/booksService');
 const { sendResponse } = require('../utils/helpers');
+const audit = require('../services/auditService');
 
 // 1) Controlador para agregar un libro
 exports.crearLibro = async (req, res, next) => {
   try {
     // Combinar datos del body con el archivo de imagen si existe
-    const data = { 
+    const data = {
       ...req.body,
       imageFile: req.file // Si se usa multer
     };
-    
+
     const libro = await booksService.crearLibro(data);
-    sendResponse(res, { 
-      data: libro, 
-      message: 'Libro creado exitosamente', 
-      action_code: 201 
+    audit.registrar({
+      accion: 'LIBRO_CREADO',
+      entidad: 'Book',
+      id_entidad: libro._id?.toString(),
+      actor: req.actor,
+      descripcion: `Libro "${req.body.title || req.body.titulo || ''}" creado`,
+      payload: { ...req.body, imageFile: undefined },
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
+    sendResponse(res, {
+      data: libro,
+      message: 'Libro creado exitosamente',
+      action_code: 201
     });
   } catch (err) {
     next(err);
@@ -26,9 +37,19 @@ exports.agregarStock = async (req, res, next) => {
   try {
     const { cantidad } = req.body;
     const libro = await booksService.agregarStock(req.params.id, cantidad);
-    sendResponse(res, { 
-      data: libro, 
-      message: 'Stock agregado exitosamente' 
+    audit.registrar({
+      accion: 'LIBRO_STOCK_AGREGADO',
+      entidad: 'Book',
+      id_entidad: req.params.id,
+      actor: req.actor,
+      descripcion: `Stock de ${cantidad} unidades agregado al libro ${req.params.id}`,
+      payload: { cantidad },
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
+    sendResponse(res, {
+      data: libro,
+      message: 'Stock agregado exitosamente'
     });
   } catch (err) {
     next(err);
@@ -39,9 +60,9 @@ exports.agregarStock = async (req, res, next) => {
 exports.listarLibrosConStock = async (req, res, next) => {
   try {
     const libros = await booksService.listarLibrosConStock();
-    sendResponse(res, { 
-      data: libros, 
-      message: 'Libros con stock obtenidos exitosamente' 
+    sendResponse(res, {
+      data: libros,
+      message: 'Libros con stock obtenidos exitosamente'
     });
   } catch (err) {
     next(err);
@@ -52,9 +73,9 @@ exports.listarLibrosConStock = async (req, res, next) => {
 exports.listarTodosLibros = async (req, res, next) => {
   try {
     const libros = await booksService.listarTodosLibros();
-    sendResponse(res, { 
-      data: libros, 
-      message: 'Todos los libros obtenidos exitosamente' 
+    sendResponse(res, {
+      data: libros,
+      message: 'Todos los libros obtenidos exitosamente'
     });
   } catch (err) {
     next(err);
@@ -82,10 +103,20 @@ exports.comprarLibros = async (req, res, next) => {
     };
 
     const venta = await booksService.comprarLibros(data);
-    sendResponse(res, { 
-      data: venta, 
-      message: 'Compra realizada exitosamente', 
-      action_code: 201 
+    audit.registrar({
+      accion: 'LIBROS_COMPRADOS',
+      entidad: 'Sale',
+      id_entidad: venta._id?.toString(),
+      actor: req.actor,
+      descripcion: `Compra de libros registrada — comprador: ${body.buyer || body.comprador || 'desconocido'}`,
+      payload: { ...body, voucherFile: undefined },
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
+    sendResponse(res, {
+      data: venta,
+      message: 'Compra realizada exitosamente',
+      action_code: 201
     });
   } catch (err) {
     next(err);
@@ -97,9 +128,19 @@ exports.entregarLibros = async (req, res, next) => {
   try {
     const { deliveredBy } = req.body;
     const venta = await booksService.entregarLibros(req.params.id, deliveredBy);
-    sendResponse(res, { 
-      data: venta, 
-      message: 'Libros entregados exitosamente' 
+    audit.registrar({
+      accion: 'LIBROS_ENTREGADOS',
+      entidad: 'Sale',
+      id_entidad: req.params.id,
+      actor: req.actor,
+      descripcion: `Venta ${req.params.id} marcada como entregada por ${deliveredBy || 'desconocido'}`,
+      payload: { deliveredBy },
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
+    sendResponse(res, {
+      data: venta,
+      message: 'Libros entregados exitosamente'
     });
   } catch (err) {
     next(err);
@@ -111,16 +152,16 @@ exports.obtenerVenta = async (req, res, next) => {
   try {
     const venta = await booksService.obtenerVenta(req.params.id);
     if (!venta) {
-      return sendResponse(res, { 
-        state: 'failed', 
-        data: null, 
-        message: 'Venta no encontrada', 
-        action_code: 404 
+      return sendResponse(res, {
+        state: 'failed',
+        data: null,
+        message: 'Venta no encontrada',
+        action_code: 404
       });
     }
-    sendResponse(res, { 
-      data: venta, 
-      message: 'Venta obtenida exitosamente' 
+    sendResponse(res, {
+      data: venta,
+      message: 'Venta obtenida exitosamente'
     });
   } catch (err) {
     next(err);
@@ -131,9 +172,9 @@ exports.listarVentas = async (req, res, next) => {
   try {
     const { status, buyer } = req.query;
     const ventas = await booksService.listarVentas({ status, buyer });
-    sendResponse(res, { 
-      data: ventas, 
-      message: 'Ventas obtenidas exitosamente' 
+    sendResponse(res, {
+      data: ventas,
+      message: 'Ventas obtenidas exitosamente'
     });
   } catch (err) {
     next(err);
@@ -144,9 +185,19 @@ exports.cambiarEstadoVenta = async (req, res, next) => {
   try {
     const { status } = req.body;
     const venta = await booksService.cambiarEstadoVenta(req.params.id, status);
-    sendResponse(res, { 
-      data: venta, 
-      message: 'Estado de venta actualizado exitosamente' 
+    audit.registrar({
+      accion: 'VENTA_ESTADO_CAMBIADO',
+      entidad: 'Sale',
+      id_entidad: req.params.id,
+      actor: req.actor,
+      descripcion: `Estado de venta ${req.params.id} cambiado a "${status}"`,
+      payload: { status },
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
+    sendResponse(res, {
+      data: venta,
+      message: 'Estado de venta actualizado exitosamente'
     });
   } catch (err) {
     next(err);
@@ -158,9 +209,9 @@ exports.verMisCompras = async (req, res, next) => {
   try {
     const { id_persona } = req.params;
     const compras = await booksService.verMisCompras(id_persona);
-    sendResponse(res, { 
-      data: compras, 
-      message: 'Mis compras obtenidas exitosamente' 
+    sendResponse(res, {
+      data: compras,
+      message: 'Mis compras obtenidas exitosamente'
     });
   } catch (err) {
     next(err);
@@ -172,20 +223,31 @@ exports.validarVoucher = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { action, validated_by, rejection_reason } = req.body;
-    
-    const venta = await booksService.validarVoucher(id, { 
-      action, 
-      validated_by, 
-      rejection_reason 
+
+    const venta = await booksService.validarVoucher(id, {
+      action,
+      validated_by,
+      rejection_reason
     });
-    
-    const message = action === 'aprobar' 
-      ? 'Voucher aprobado exitosamente' 
+
+    const message = action === 'aprobar'
+      ? 'Voucher aprobado exitosamente'
       : 'Voucher rechazado exitosamente';
-    
-    sendResponse(res, { 
-      data: venta, 
-      message 
+
+    audit.registrar({
+      accion: action === 'aprobar' ? 'VOUCHER_APROBADO' : 'VOUCHER_RECHAZADO',
+      entidad: 'Sale',
+      id_entidad: id,
+      actor: req.actor,
+      descripcion: `Voucher de venta ${id} ${action === 'aprobar' ? 'aprobado' : 'rechazado'} por ${validated_by || 'desconocido'}`,
+      payload: { validated_by, rejection_reason },
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
+
+    sendResponse(res, {
+      data: venta,
+      message
     });
   } catch (err) {
     next(err);
@@ -203,11 +265,20 @@ exports.actualizarImagenLibro = async (req, res, next) => {
       imageBase64: req.body.imageBase64,
       imageUrl: req.body.imageUrl
     };
-    
+
     const libro = await booksService.actualizarImagenLibro(id, imageData);
-    sendResponse(res, { 
-      data: libro, 
-      message: 'Imagen del libro actualizada exitosamente' 
+    audit.registrar({
+      accion: 'LIBRO_IMAGEN_ACTUALIZADA',
+      entidad: 'Book',
+      id_entidad: id,
+      actor: req.actor,
+      descripcion: `Imagen del libro ${id} actualizada`,
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
+    sendResponse(res, {
+      data: libro,
+      message: 'Imagen del libro actualizada exitosamente'
     });
   } catch (err) {
     next(err);
@@ -219,9 +290,18 @@ exports.eliminarImagenLibro = async (req, res, next) => {
   try {
     const { id } = req.params;
     const libro = await booksService.eliminarImagenLibro(id);
-    sendResponse(res, { 
-      data: libro, 
-      message: 'Imagen del libro eliminada exitosamente' 
+    audit.registrar({
+      accion: 'LIBRO_IMAGEN_ELIMINADA',
+      entidad: 'Book',
+      id_entidad: id,
+      actor: req.actor,
+      descripcion: `Imagen del libro ${id} eliminada`,
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
+    sendResponse(res, {
+      data: libro,
+      message: 'Imagen del libro eliminada exitosamente'
     });
   } catch (err) {
     next(err);
@@ -233,9 +313,9 @@ exports.obtenerImagenLibro = async (req, res, next) => {
   try {
     const { id } = req.params;
     const result = await booksService.obtenerImagenLibro(id);
-    sendResponse(res, { 
-      data: result, 
-      message: 'Información de imagen obtenida exitosamente' 
+    sendResponse(res, {
+      data: result,
+      message: 'Información de imagen obtenida exitosamente'
     });
   } catch (err) {
     next(err);

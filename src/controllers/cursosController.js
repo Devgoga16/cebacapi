@@ -1,5 +1,6 @@
 const cursosService = require('../services/cursosService');
 const { sendResponse } = require('../utils/helpers');
+const audit = require('../services/auditService');
 
 exports.getAllCursos = async (req, res, next) => {
   try {
@@ -23,6 +24,16 @@ exports.getCursoById = async (req, res, next) => {
 exports.createCurso = async (req, res, next) => {
   try {
     const newCurso = await cursosService.createCurso(req.body);
+    audit.registrar({
+      accion: 'CURSO_CREADO',
+      entidad: 'Curso',
+      id_entidad: newCurso._id?.toString(),
+      actor: req.actor,
+      descripcion: `Curso "${req.body.nombre_curso}" creado`,
+      payload: req.body,
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
     sendResponse(res, { data: newCurso, message: 'Curso creado', action_code: 201 });
   } catch (err) {
     next(err);
@@ -33,6 +44,16 @@ exports.updateCurso = async (req, res, next) => {
   try {
     const updatedCurso = await cursosService.updateCurso(req.params.id, req.body);
     if (!updatedCurso) return sendResponse(res, { state: 'failed', data: null, message: 'Curso no encontrado', action_code: 404 });
+    audit.registrar({
+      accion: 'CURSO_ACTUALIZADO',
+      entidad: 'Curso',
+      id_entidad: req.params.id,
+      actor: req.actor,
+      descripcion: `Curso ${req.params.id} actualizado`,
+      payload: req.body,
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
     sendResponse(res, { data: updatedCurso, message: 'Curso actualizado' });
   } catch (err) {
     next(err);
@@ -43,6 +64,15 @@ exports.deleteCurso = async (req, res, next) => {
   try {
     const deleted = await cursosService.deleteCurso(req.params.id);
     if (!deleted) return sendResponse(res, { state: 'failed', data: null, message: 'Curso no encontrado', action_code: 404 });
+    audit.registrar({
+      accion: 'CURSO_ELIMINADO',
+      entidad: 'Curso',
+      id_entidad: req.params.id,
+      actor: req.actor,
+      descripcion: `Curso ${req.params.id} eliminado`,
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
     sendResponse(res, { data: null, message: 'Curso eliminado' });
   } catch (err) {
     next(err);

@@ -1,5 +1,6 @@
 const anunciosProfesorService = require('../services/anunciosProfesorService');
 const { sendResponse } = require('../utils/helpers');
+const audit = require('../services/auditService');
 
 /**
  * Obtiene todos los anuncios de un aula
@@ -50,10 +51,20 @@ exports.getAnuncioById = async (req, res, next) => {
 exports.createAnuncio = async (req, res, next) => {
   try {
     const nuevoAnuncio = await anunciosProfesorService.createAnuncio(req.body);
-    sendResponse(res, { 
-      data: nuevoAnuncio, 
+    audit.registrar({
+      accion: 'ANUNCIO_PROFESOR_CREADO',
+      entidad: 'AnuncioProfesor',
+      id_entidad: nuevoAnuncio._id?.toString(),
+      actor: req.actor,
+      descripcion: `Anuncio de profesor creado para aula ${req.body.id_aula}`,
+      payload: req.body,
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
+    sendResponse(res, {
+      data: nuevoAnuncio,
       message: 'Anuncio creado exitosamente',
-      action_code: 201 
+      action_code: 201
     });
   } catch (err) {
     next(err);
@@ -68,9 +79,19 @@ exports.updateAnuncio = async (req, res, next) => {
   try {
     const { id } = req.params;
     const anuncioActualizado = await anunciosProfesorService.updateAnuncio(id, req.body);
-    sendResponse(res, { 
-      data: anuncioActualizado, 
-      message: 'Anuncio actualizado exitosamente' 
+    audit.registrar({
+      accion: 'ANUNCIO_PROFESOR_ACTUALIZADO',
+      entidad: 'AnuncioProfesor',
+      id_entidad: id,
+      actor: req.actor,
+      descripcion: `Anuncio de profesor ${id} actualizado`,
+      payload: req.body,
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
+    sendResponse(res, {
+      data: anuncioActualizado,
+      message: 'Anuncio actualizado exitosamente'
     });
   } catch (err) {
     next(err);
@@ -85,11 +106,21 @@ exports.deleteAnuncio = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { id_profesor } = req.body; // Para validación de seguridad
-    
+
     await anunciosProfesorService.deleteAnuncio(id, id_profesor);
-    sendResponse(res, { 
-      data: null, 
-      message: 'Anuncio eliminado exitosamente' 
+    audit.registrar({
+      accion: 'ANUNCIO_PROFESOR_ELIMINADO',
+      entidad: 'AnuncioProfesor',
+      id_entidad: id,
+      actor: req.actor,
+      descripcion: `Anuncio de profesor ${id} eliminado por ${id_profesor}`,
+      payload: { id_profesor },
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
+    sendResponse(res, {
+      data: null,
+      message: 'Anuncio eliminado exitosamente'
     });
   } catch (err) {
     next(err);
@@ -105,7 +136,7 @@ exports.getAnunciosRecientesByProfesor = async (req, res, next) => {
     const { id_profesor } = req.params;
     const { limite } = req.query;
     const anuncios = await anunciosProfesorService.getAnunciosRecientesByProfesor(
-      id_profesor, 
+      id_profesor,
       limite ? parseInt(limite) : 10
     );
     sendResponse(res, { data: anuncios });

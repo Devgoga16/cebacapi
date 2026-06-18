@@ -1,5 +1,6 @@
 const tiposCalificacionService = require('../services/tiposCalificacionService');
 const { sendResponse } = require('../utils/helpers');
+const audit = require('../services/auditService');
 
 /**
  * Crea o actualiza los tipos de calificación para un aula
@@ -11,20 +12,30 @@ exports.setTiposCalificacion = async (req, res, next) => {
     const { tipos } = req.body;
 
     if (!tipos || !Array.isArray(tipos)) {
-      return sendResponse(res, { 
-        state: 'failed', 
-        data: null, 
-        message: 'Se requiere un array de tipos de calificación', 
-        action_code: 400 
+      return sendResponse(res, {
+        state: 'failed',
+        data: null,
+        message: 'Se requiere un array de tipos de calificación',
+        action_code: 400
       });
     }
 
     const tiposCreados = await tiposCalificacionService.setTiposCalificacion(idAula, tipos);
-    
-    sendResponse(res, { 
-      data: tiposCreados, 
-      message: 'Tipos de calificación configurados exitosamente', 
-      action_code: 201 
+    audit.registrar({
+      accion: 'TIPOS_CALIFICACION_CONFIGURADOS',
+      entidad: 'TipoCalificacion',
+      id_entidad: idAula,
+      actor: req.actor,
+      descripcion: `Tipos de calificación configurados para el aula ${idAula} — ${tipos.length} tipos`,
+      payload: { idAula, tipos },
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
+
+    sendResponse(res, {
+      data: tiposCreados,
+      message: 'Tipos de calificación configurados exitosamente',
+      action_code: 201
     });
   } catch (err) {
     next(err);
@@ -39,8 +50,8 @@ exports.getTiposCalificacionByAula = async (req, res, next) => {
   try {
     const { idAula } = req.params;
     const tipos = await tiposCalificacionService.getTiposCalificacionByAula(idAula);
-    
-    sendResponse(res, { 
+
+    sendResponse(res, {
       data: tipos,
       message: tipos.length > 0 ? 'Tipos de calificación encontrados' : 'No hay tipos de calificación configurados para esta aula'
     });
@@ -57,10 +68,20 @@ exports.deleteTiposCalificacionByAula = async (req, res, next) => {
   try {
     const { idAula } = req.params;
     const result = await tiposCalificacionService.deleteTiposCalificacionByAula(idAula);
-    
-    sendResponse(res, { 
-      data: { deletedCount: result.deletedCount }, 
-      message: 'Tipos de calificación eliminados' 
+    audit.registrar({
+      accion: 'TIPOS_CALIFICACION_ELIMINADOS',
+      entidad: 'TipoCalificacion',
+      id_entidad: idAula,
+      actor: req.actor,
+      descripcion: `Tipos de calificación del aula ${idAula} eliminados`,
+      payload: { deletedCount: result.deletedCount },
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
+
+    sendResponse(res, {
+      data: { deletedCount: result.deletedCount },
+      message: 'Tipos de calificación eliminados'
     });
   } catch (err) {
     next(err);
@@ -77,10 +98,20 @@ exports.updateTipoCalificacion = async (req, res, next) => {
     const updateData = req.body;
 
     const tipoActualizado = await tiposCalificacionService.updateTipoCalificacion(idTipo, updateData);
-    
-    sendResponse(res, { 
-      data: tipoActualizado, 
-      message: 'Tipo de calificación actualizado' 
+    audit.registrar({
+      accion: 'TIPO_CALIFICACION_ACTUALIZADO',
+      entidad: 'TipoCalificacion',
+      id_entidad: idTipo,
+      actor: req.actor,
+      descripcion: `Tipo de calificación ${idTipo} actualizado`,
+      payload: updateData,
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
+
+    sendResponse(res, {
+      data: tipoActualizado,
+      message: 'Tipo de calificación actualizado'
     });
   } catch (err) {
     next(err);

@@ -12,6 +12,7 @@ exports.login = async (req, res, next) => {
         entidad: 'Usuario',
         actor: { id_usuario: null, username },
         descripcion: `Intento de login fallido para usuario "${username}"`,
+        payload: { username },
         ip: req.ip,
         user_agent: req.headers['user-agent'],
       });
@@ -23,6 +24,14 @@ exports.login = async (req, res, next) => {
       id_entidad: result.usuario?._id?.toString(),
       actor: { id_usuario: result.usuario?._id?.toString(), username: result.usuario?.username },
       descripcion: `Usuario "${result.usuario?.username}" inició sesión`,
+      payload: {
+        username: result.usuario?.username,
+        roles: result.roles?.map((r) => r.nombre_rol || r.nombre || r._id?.toString()) || result.usuario?.roles,
+        id_persona: result.persona?._id?.toString() || null,
+        nombre_persona: result.persona
+          ? `${result.persona.nombres || ''} ${result.persona.apellido_paterno || ''} ${result.persona.apellido_materno || ''}`.trim()
+          : null,
+      },
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });

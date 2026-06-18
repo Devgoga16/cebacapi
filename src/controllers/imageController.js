@@ -1,5 +1,6 @@
 const imageUploadService = require('../services/imageUploadService');
 const { sendResponse } = require('../utils/helpers');
+const audit = require('../services/auditService');
 
 const imageController = {
   // Subir imagen desde archivo
@@ -36,6 +37,16 @@ const imageController = {
         req.file.originalname
       );
 
+      audit.registrar({
+        accion: 'IMAGEN_SUBIDA',
+        entidad: 'Imagen',
+        actor: req.actor,
+        descripcion: `Imagen "${req.file.originalname}" subida desde archivo`,
+        payload: { filename: req.file.originalname, size: req.file.size, url: result?.url },
+        ip: req.ip,
+        user_agent: req.headers['user-agent'],
+      });
+
       sendResponse(res, {
         state: 'success',
         data: result,
@@ -68,6 +79,16 @@ const imageController = {
         base64,
         filename || 'image.jpg'
       );
+
+      audit.registrar({
+        accion: 'IMAGEN_SUBIDA',
+        entidad: 'Imagen',
+        actor: req.actor,
+        descripcion: `Imagen "${filename || 'image.jpg'}" subida desde base64`,
+        payload: { filename: filename || 'image.jpg', url: result?.url },
+        ip: req.ip,
+        user_agent: req.headers['user-agent'],
+      });
 
       sendResponse(res, {
         state: 'success',
@@ -108,6 +129,16 @@ const imageController = {
       }
 
       const result = await imageUploadService.uploadFromUrl(url);
+
+      audit.registrar({
+        accion: 'IMAGEN_SUBIDA',
+        entidad: 'Imagen',
+        actor: req.actor,
+        descripcion: `Imagen subida desde URL ${url}`,
+        payload: { url, resultado: result?.url },
+        ip: req.ip,
+        user_agent: req.headers['user-agent'],
+      });
 
       sendResponse(res, {
         state: 'success',
@@ -174,6 +205,20 @@ const imageController = {
           });
         }
       }
+
+      audit.registrar({
+        accion: 'IMAGENES_SUBIDAS_MULTIPLE',
+        entidad: 'Imagen',
+        actor: req.actor,
+        descripcion: `Subida múltiple de imágenes — ${results.length} exitosas, ${errors.length} fallidas`,
+        payload: {
+          total: req.files.length,
+          exitosas: results.map((r) => r.filename),
+          fallidas: errors,
+        },
+        ip: req.ip,
+        user_agent: req.headers['user-agent'],
+      });
 
       sendResponse(res, {
         state: errors.length === 0 ? 'success' : 'partial',
