@@ -5,7 +5,8 @@ WORKDIR /app
 
 # python3/make/g++ son requeridos por bcrypt para compilar su addon nativo
 # sharp >=0.30 ya incluye libvips empaquetado, no necesita vips-dev
-RUN apk add --no-cache python3 make g++
+# cairo/pango/jpeg/giflib/pixman + pkgconfig son requeridos por "canvas" (usado por chartjs-node-canvas)
+RUN apk add --no-cache python3 make g++ pkgconfig pixman-dev cairo-dev pango-dev jpeg-dev giflib-dev
 
 # Copiar archivos de dependencias
 COPY package*.json ./
@@ -17,6 +18,9 @@ RUN npm ci --only=production
 FROM node:18-alpine
 
 WORKDIR /app
+
+# Librerías de runtime requeridas por "canvas" (chartjs-node-canvas las necesita en producción, no solo al compilar)
+RUN apk add --no-cache cairo pango jpeg giflib
 
 # Crear usuario no-root para seguridad
 RUN addgroup -g 1001 -S nodejs && \
