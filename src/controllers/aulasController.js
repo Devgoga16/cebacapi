@@ -1,5 +1,7 @@
 const aulasService = require('../services/aulasService');
 const { sendResponse } = require('../utils/helpers');
+const audit = require('../services/auditService');
+const { validateAulaInput } = require('../utils/aulaValidator');
 
 exports.getAllAulas = async (req, res, next) => {
   try {
@@ -20,9 +22,6 @@ exports.getAulaById = async (req, res, next) => {
   }
 };
 
-
-const { validateAulaInput } = require('../utils/aulaValidator');
-
 exports.createAula = async (req, res, next) => {
   try {
     const errors = validateAulaInput(req.body);
@@ -30,13 +29,22 @@ exports.createAula = async (req, res, next) => {
       return sendResponse(res, { state: 'failed', data: null, message: errors.join(', '), action_code: 400 });
     }
     const newAula = await aulasService.createAula(req.body);
+    audit.registrar({
+      accion: 'AULA_CREADA',
+      entidad: 'Aula',
+      id_entidad: newAula._id?.toString(),
+      actor: req.actor,
+      descripcion: `Aula creada para curso ${req.body.id_curso} en ciclo ${req.body.id_ciclo}`,
+      payload: req.body,
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
     sendResponse(res, { data: newAula, message: 'Aula creada', action_code: 201 });
   } catch (err) {
     next(err);
   }
 };
 
-// Convierte snake_case a camelCase para los campos personalizados
 function normalizeAulaFields(body) {
   if (body.link_whatsapp) {
     body.linkWhatsApp = body.link_whatsapp;
@@ -58,6 +66,16 @@ exports.updateAula = async (req, res, next) => {
     }
     const updatedAula = await aulasService.updateAula(req.params.id, normalizedBody);
     if (!updatedAula) return sendResponse(res, { state: 'failed', data: null, message: 'Aula no encontrada', action_code: 404 });
+    audit.registrar({
+      accion: 'AULA_ACTUALIZADA',
+      entidad: 'Aula',
+      id_entidad: req.params.id,
+      actor: req.actor,
+      descripcion: `Aula ${req.params.id} actualizada`,
+      payload: normalizedBody,
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
     sendResponse(res, { data: updatedAula, message: 'Aula actualizada' });
   } catch (err) {
     next(err);
@@ -68,6 +86,15 @@ exports.deleteAula = async (req, res, next) => {
   try {
     const deleted = await aulasService.deleteAula(req.params.id);
     if (!deleted) return sendResponse(res, { state: 'failed', data: null, message: 'Aula no encontrada', action_code: 404 });
+    audit.registrar({
+      accion: 'AULA_ELIMINADA',
+      entidad: 'Aula',
+      id_entidad: req.params.id,
+      actor: req.actor,
+      descripcion: `Aula ${req.params.id} eliminada`,
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
     sendResponse(res, { data: null, message: 'Aula eliminada' });
   } catch (err) {
     next(err);
@@ -78,17 +105,19 @@ exports.deleteAulaCompleto = async (req, res, next) => {
   try {
     const result = await aulasService.deleteAulaCompleto(req.params.id);
     if (!result.success) {
-      return sendResponse(res, { 
-        state: 'failed', 
-        data: null, 
-        message: result.message, 
-        action_code: 404 
-      });
+      return sendResponse(res, { state: 'failed', data: null, message: result.message, action_code: 404 });
     }
-    sendResponse(res, { 
-      data: result.deletedInfo, 
-      message: result.message 
+    audit.registrar({
+      accion: 'AULA_ELIMINADA_COMPLETO',
+      entidad: 'Aula',
+      id_entidad: req.params.id,
+      actor: req.actor,
+      descripcion: `Aula ${req.params.id} eliminada con todos sus registros asociados`,
+      payload: result.deletedInfo,
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
     });
+    sendResponse(res, { data: result.deletedInfo, message: result.message });
   } catch (err) {
     next(err);
   }
@@ -128,6 +157,15 @@ exports.iniciarAula = async (req, res, next) => {
   try {
     const { id } = req.params;
     const aula = await aulasService.iniciarAula(id);
+    audit.registrar({
+      accion: 'AULA_INICIADA',
+      entidad: 'Aula',
+      id_entidad: id,
+      actor: req.actor,
+      descripcion: `Aula ${id} marcada como iniciada`,
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
     sendResponse(res, { data: aula, message: 'Aula iniciada' });
   } catch (err) {
     next(err);

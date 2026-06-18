@@ -1,5 +1,7 @@
 const errorHandler = require('./middlewares/errorHandler');
+const extractActor = require('./middlewares/extractActor');
 require('./config/db');
+require('./config/dbLogs');
 const express = require('express');
 const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
@@ -29,9 +31,11 @@ const calificacionesRoutes = require('./routes/calificacionesRoutes');
 const anunciosProfesorRoutes = require('./routes/anunciosProfesorRoutes');
 const alumnosRoutes = require('./routes/alumnosRoutes');
 const reportesRoutes = require('./routes/reportesRoutes');
+const auditLogsRoutes = require('./routes/auditLogsRoutes');
 
 const app = express();
 app.use(cors());
+app.use(extractActor);
 // Aumenta el tamaño máximo del body para permitir imágenes en base64 u otros payloads grandes
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -118,6 +122,8 @@ app.use('/api/calificaciones', calificacionesRoutes);
 app.use('/api/anuncios-profesor', anunciosProfesorRoutes);
 app.use('/api/alumnos', alumnosRoutes);
 app.use('/api/reportes', reportesRoutes);
+app.use('/audit-logs', auditLogsRoutes);
+app.use('/api/audit-logs', auditLogsRoutes);
 
 // Middleware de manejo de errores
 app.use(errorHandler);

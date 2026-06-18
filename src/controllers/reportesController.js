@@ -1,4 +1,5 @@
 const reportesService = require('../services/reportesService');
+const { generarReporteResumenCiclo } = require('../services/reporteResumenCicloService');
 const Aula = require('../models/aula');
 const Ciclo = require('../models/ciclo');
 
@@ -129,7 +130,45 @@ const descargarReporteCicloCompleto = async (req, res, next) => {
   }
 };
 
+/**
+ * Genera y descarga el reporte resumen de un ciclo en formato Excel (2 hojas)
+ * GET /api/reportes/resumen-ciclo/:idCiclo
+ */
+const descargarReporteResumenCiclo = async (req, res, next) => {
+  try {
+    const { idCiclo } = req.params;
+
+    if (!idCiclo) {
+      return res.status(400).json({ success: false, message: 'El parámetro idCiclo es requerido' });
+    }
+
+    const ciclo = await Ciclo.findById(idCiclo).lean();
+    if (!ciclo) {
+      return res.status(404).json({ success: false, message: 'Ciclo no encontrado' });
+    }
+
+    const workbook = await generarReporteResumenCiclo(idCiclo);
+
+    const nombreCiclo = ciclo.nombre_ciclo.replace(/[^a-zA-Z0-9]/g, '_');
+    const filename = `Resumen_${nombreCiclo}_${ciclo.año}.xlsx`;
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    if (res.headersSent) return res.end();
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Error al generar el reporte resumen',
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+    });
+  }
+};
+
 module.exports = {
   descargarReporteAsistencias,
-  descargarReporteCicloCompleto
+  descargarReporteCicloCompleto,
+  descargarReporteResumenCiclo,
 };

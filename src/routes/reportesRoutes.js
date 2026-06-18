@@ -176,4 +176,44 @@ router.get('/asistencias/:idAula', reportesController.descargarReporteAsistencia
  */
 router.get('/ciclo/:idCiclo', reportesController.descargarReporteCicloCompleto);
 
+/**
+ * @swagger
+ * /reportes/resumen-ciclo/{idCiclo}:
+ *   get:
+ *     summary: Genera el reporte resumen general de un ciclo en Excel
+ *     description: |
+ *       Genera un archivo Excel con dos hojas:
+ *
+ *       **Hoja 1 – Resumen General**
+ *       - KPIs: total alumnos matriculados, profesores asignados, aulas creadas, nivel de asistencia
+ *       - Tabla de estados: aprobados, reprobados, en curso, retirados (con porcentajes)
+ *       - Gráfico de barras embebido con la distribución de estados
+ *
+ *       **Hoja 2 – Reporte de Alumnos**
+ *       - Listado de alumnos únicos del ciclo con nombre, género, iglesia, ministerio, estado y nota
+ *       - Filtros nativos de Excel en todas las columnas (iglesia, ministerio, género, estado)
+ *       - Fila de encabezado congelada para navegación cómoda
+ *     tags: [Reportes]
+ *     parameters:
+ *       - in: path
+ *         name: idCiclo
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID del ciclo
+ *     responses:
+ *       200:
+ *         description: Archivo Excel generado exitosamente
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       404:
+ *         description: Ciclo no encontrado
+ *       500:
+ *         description: Error al generar el reporte
+ */
+router.get('/resumen-ciclo/:idCiclo', reportesController.descargarReporteResumenCiclo);
+
 module.exports = router;

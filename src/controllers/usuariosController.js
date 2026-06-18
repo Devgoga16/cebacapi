@@ -1,15 +1,27 @@
-// Simula la validación de cuenta
 const { sendResponse } = require('../utils/helpers');
 const usuariosService = require('../services/usuariosService');
+const audit = require('../services/auditService');
 
 exports.validarUsuario = async (req, res, next) => {
   try {
-  const result = await usuariosService.validarUsuario(req.params.iduser);
-  const fullName = result.persona ? `${result.persona.nombres} ${result.persona.apellido_paterno} ${result.persona.apellido_materno}`.trim() : result.usuario.username;
-  const email = result.persona?.email || '';
-  const rol = (result.usuario.roles && result.usuario.roles[0]) ? result.usuario.roles[0] : 'Estudiante';
+    const result = await usuariosService.validarUsuario(req.params.iduser);
+    const fullName = result.persona
+      ? `${result.persona.nombres} ${result.persona.apellido_paterno} ${result.persona.apellido_materno}`.trim()
+      : result.usuario.username;
+    const email = result.persona?.email || '';
+    const rol = result.usuario.roles?.[0] || 'Estudiante';
 
-  const html = `<!DOCTYPE html>
+    audit.registrar({
+      accion: 'USUARIO_VALIDADO',
+      entidad: 'Usuario',
+      id_entidad: req.params.iduser,
+      actor: req.actor,
+      descripcion: `Cuenta de usuario "${result.usuario.username}" validada`,
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
+
+    const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
@@ -66,13 +78,11 @@ exports.validarUsuario = async (req, res, next) => {
     next(err);
   }
 };
-// usuariosService require moved to top
 
 exports.getAllUsuarios = async (req, res, next) => {
   try {
     const usuarios = await usuariosService.getAllUsuarios();
-    res.json({ state: 'success', data: usuarios, message: 'Éxito al traer todos los usuarios', action_code: null
-     });
+    res.json({ state: 'success', data: usuarios, message: 'Éxito al traer todos los usuarios', action_code: null });
   } catch (err) {
     next(err);
   }
@@ -91,6 +101,16 @@ exports.getUsuarioById = async (req, res, next) => {
 exports.createUsuario = async (req, res, next) => {
   try {
     const newUsuario = await usuariosService.createUsuario(req.body);
+    audit.registrar({
+      accion: 'USUARIO_CREADO',
+      entidad: 'Usuario',
+      id_entidad: newUsuario._id?.toString(),
+      actor: req.actor,
+      descripcion: `Usuario "${req.body.username}" creado`,
+      payload: { username: req.body.username, roles: req.body.roles },
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
     res.status(201).json({ state: 'success', data: newUsuario, message: 'Usuario creado', action_code: 201 });
   } catch (err) {
     next(err);
@@ -101,6 +121,16 @@ exports.updateUsuario = async (req, res, next) => {
   try {
     const updatedUsuario = await usuariosService.updateUsuario(req.params.id, req.body);
     if (!updatedUsuario) return res.status(404).json({ state: 'failed', data: null, message: 'Usuario no encontrado', action_code: 404 });
+    audit.registrar({
+      accion: 'USUARIO_ACTUALIZADO',
+      entidad: 'Usuario',
+      id_entidad: req.params.id,
+      actor: req.actor,
+      descripcion: `Usuario ${req.params.id} actualizado`,
+      payload: { username: req.body.username, roles: req.body.roles },
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
     res.json({ state: 'success', data: updatedUsuario, message: 'Usuario actualizado', action_code: 200 });
   } catch (err) {
     next(err);
@@ -111,6 +141,15 @@ exports.deleteUsuario = async (req, res, next) => {
   try {
     const deleted = await usuariosService.deleteUsuario(req.params.id);
     if (!deleted) return res.status(404).json({ state: 'failed', data: null, message: 'Usuario no encontrado', action_code: 404 });
+    audit.registrar({
+      accion: 'USUARIO_ELIMINADO',
+      entidad: 'Usuario',
+      id_entidad: req.params.id,
+      actor: req.actor,
+      descripcion: `Usuario ${req.params.id} eliminado`,
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
     res.json({ state: 'success', data: null, message: 'Usuario eliminado', action_code: 200 });
   } catch (err) {
     next(err);
@@ -120,6 +159,16 @@ exports.deleteUsuario = async (req, res, next) => {
 exports.createUsuarioYPersona = async (req, res, next) => {
   try {
     const result = await usuariosService.createUsuarioYPersona(req.body);
+    audit.registrar({
+      accion: 'USUARIO_PERSONA_CREADO',
+      entidad: 'Usuario',
+      id_entidad: result.usuario?._id?.toString(),
+      actor: req.actor,
+      descripcion: `Usuario "${req.body.username}" y Persona creados en conjunto`,
+      payload: { username: req.body.username, roles: req.body.roles },
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
     res.status(201).json({ state: 'success', data: result, message: 'Usuario y Persona creados', action_code: 201 });
   } catch (err) {
     next(err);
