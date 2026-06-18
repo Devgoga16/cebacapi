@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 
-const LOGS_URI = process.env.MONGODB_LOGS_URI ||
-  'mongodb+srv://monkeywit:hLe1WN9qzEAyB2jo@cluster0.2elgi.mongodb.net/cebac-logs?retryWrites=true&w=majority&appName=Cluster0';
+const LOGS_URI = process.env.MONGODB_LOGS_URI;
 
 let logsConn;
 
