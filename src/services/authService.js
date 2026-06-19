@@ -2,6 +2,7 @@ const Usuario = require('../models/usuario');
 const Persona = require('../models/persona');
 const Rol = require('../models/rol');
 const bcrypt = require('bcrypt');
+const { generarToken } = require('../utils/jwt');
 
 exports.login = async (username, password) => {
   // Buscar usuario por username
@@ -28,8 +29,17 @@ exports.login = async (username, password) => {
   // Traer roles
   const roles = await Rol.find({ _id: { $in: usuario.roles } });
 
+  // Generar token JWT con la identidad del usuario
+  const token = generarToken({
+    id_usuario: usuario._id.toString(),
+    username: usuario.username,
+    roles: usuario.roles,
+    id_persona: persona?._id?.toString() || null,
+  });
+
   // Retornar datos completos
   return {
+    token,
     usuario: {
       _id: usuario._id,
       username: usuario.username,
