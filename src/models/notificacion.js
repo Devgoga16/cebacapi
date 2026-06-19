@@ -18,6 +18,12 @@ const NotificacionSchema = new mongoose.Schema(
       default: null,
       // id de la entidad relacionada (ej: id del anuncio)
     },
+    id_aula: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Aula',
+      default: null,
+      // solo aplica cuando tipo = 'ANUNCIO_PROFESOR'
+    },
     titulo: { type: String, required: true, trim: true },
     mensaje: { type: String, required: true, trim: true },
     leido: { type: Boolean, default: false, index: true },

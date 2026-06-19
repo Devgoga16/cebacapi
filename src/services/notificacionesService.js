@@ -3,22 +3,23 @@ const Notificacion = require('../models/notificacion');
 /**
  * Crea una notificación individual.
  */
-exports.crearNotificacion = async ({ id_usuario, tipo, referencia_id = null, titulo, mensaje }) => {
-  return await Notificacion.create({ id_usuario, tipo, referencia_id, titulo, mensaje });
+exports.crearNotificacion = async ({ id_usuario, tipo, referencia_id = null, id_aula = null, titulo, mensaje }) => {
+  return await Notificacion.create({ id_usuario, tipo, referencia_id, id_aula, titulo, mensaje });
 };
 
 /**
  * Crea una notificación para cada usuario de la lista (inserción masiva).
  * @param {string[]} idsUsuarios
- * @param {{ tipo: string, referencia_id?: string, titulo: string, mensaje: string }} datosComunes
+ * @param {{ tipo: string, referencia_id?: string, id_aula?: string, titulo: string, mensaje: string }} datosComunes
  */
-exports.crearNotificacionesMasivas = async (idsUsuarios, { tipo, referencia_id = null, titulo, mensaje }) => {
+exports.crearNotificacionesMasivas = async (idsUsuarios, { tipo, referencia_id = null, id_aula = null, titulo, mensaje }) => {
   if (!Array.isArray(idsUsuarios) || idsUsuarios.length === 0) return [];
 
   const docs = idsUsuarios.map((id_usuario) => ({
     id_usuario,
     tipo,
     referencia_id,
+    id_aula,
     titulo,
     mensaje,
   }));
