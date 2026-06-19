@@ -119,6 +119,7 @@ async function notificarAlumnosNuevoAnuncio({ id_aula, id_anuncio, nombreProfeso
       .crearNotificacionesMasivas(idsAlumnos, {
         tipo: 'ANUNCIO_PROFESOR',
         referencia_id: id_anuncio,
+        tipo_entidad: 'AnuncioProfesor',
         id_aula,
         titulo: `Nuevo anuncio en ${nombreCurso}`,
         mensaje: `${nombreProfesor} publicó: "${titulo}"`,

@@ -35,6 +35,7 @@ async function notificarUsuariosNuevoAnuncio(anuncio) {
     await notificacionesService.crearNotificacionesMasivas(idsPersonas, {
       tipo: 'ANUNCIO_GENERAL',
       referencia_id: anuncio._id,
+      tipo_entidad: 'Anuncio',
       titulo: anuncio.titulo,
       mensaje: anuncio.mensaje,
     });

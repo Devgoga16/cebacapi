@@ -53,6 +53,7 @@ async function notificarDuenioReaccion({ tipo_entidad, id_anuncio, id_usuario_qu
       id_usuario: contexto.id_dueno,
       tipo: 'REACCION_ANUNCIO',
       referencia_id: id_anuncio,
+      tipo_entidad, // 'AnuncioProfesor' o 'Anuncio' — indispensable para que el frontend sepa qué detalle pedir
       id_aula: contexto.id_aula,
       titulo: `Nueva reacción en "${contexto.titulo}"`,
       mensaje: `${nombre} reaccionó ${emoji} a tu anuncio`,

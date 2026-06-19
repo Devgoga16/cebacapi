@@ -18,6 +18,13 @@ const NotificacionSchema = new mongoose.Schema(
       default: null,
       // id de la entidad relacionada (ej: id del anuncio)
     },
+    tipo_entidad: {
+      type: String,
+      enum: ['AnuncioProfesor', 'Anuncio', null],
+      default: null,
+      // a qué colección pertenece "referencia_id". Indispensable cuando "tipo" es ambiguo
+      // (ej: 'REACCION_ANUNCIO' puede originarse tanto en AnuncioProfesor como en Anuncio).
+    },
     id_aula: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Aula',
