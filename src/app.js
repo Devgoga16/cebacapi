@@ -33,6 +33,7 @@ const alumnosRoutes = require('./routes/alumnosRoutes');
 const reportesRoutes = require('./routes/reportesRoutes');
 const auditLogsRoutes = require('./routes/auditLogsRoutes');
 const notificacionesRoutes = require('./routes/notificacionesRoutes');
+const reaccionesRoutes = require('./routes/reaccionesRoutes');
 
 const app = express();
 app.use(cors());
@@ -127,6 +128,8 @@ app.use('/audit-logs', auditLogsRoutes);
 app.use('/api/audit-logs', auditLogsRoutes);
 app.use('/notificaciones', notificacionesRoutes);
 app.use('/api/notificaciones', notificacionesRoutes);
+app.use('/reacciones', reaccionesRoutes);
+app.use('/api/reacciones', reaccionesRoutes);
 
 // Middleware de manejo de errores
 app.use(errorHandler);

@@ -4,6 +4,40 @@ const Persona = require('../models/persona');
 const AulaAlumno = require('../models/aulaalumno');
 const { sendMultipleEmail } = require('../utils/emailNotifier');
 const notificacionesService = require('./notificacionesService');
+const reaccionesService = require('./reaccionesService');
+
+/**
+ * Calcula si un anuncio está "activo" o "vencido" según su fecha_vencimiento.
+ * Si no tiene fecha_vencimiento, se considera siempre activo.
+ */
+function calcularEstado(anuncio) {
+  if (!anuncio.fecha_vencimiento) return 'activo';
+  return new Date(anuncio.fecha_vencimiento) < new Date() ? 'vencido' : 'activo';
+}
+
+/**
+ * Adjunta a cada anuncio el campo `estado` (activo/vencido) y el resumen+detalle de reacciones.
+ */
+async function enriquecerAnuncios(anuncios) {
+  if (anuncios.length === 0) return anuncios;
+
+  const ids = anuncios.map((a) => a._id);
+  const reaccionesPorAnuncio = await reaccionesService.getResumenYDetalleMasivo('AnuncioProfesor', ids);
+
+  return anuncios.map((a) => ({
+    ...a,
+    estado: calcularEstado(a),
+    reacciones: reaccionesPorAnuncio[String(a._id)] || { total: 0, conteos: {}, detalle: [] },
+  }));
+}
+
+/**
+ * Adjunta estado + reacciones a un único anuncio.
+ */
+async function enriquecerAnuncio(anuncio) {
+  const [enriquecido] = await enriquecerAnuncios([anuncio]);
+  return enriquecido;
+}
 
 const ESTADOS_NO_NOTIFICABLES = ['retirado', 'solicitud de retiro', 'rechazado'];
 
@@ -102,7 +136,7 @@ async function notificarAlumnosNuevoAnuncio({ id_aula, id_anuncio, nombreProfeso
 }
 
 /**
- * Obtiene todos los anuncios de un aula
+ * Obtiene todos los anuncios de un aula, con estado (activo/vencido) y reacciones adjuntas
  */
 exports.getAnunciosByAula = async (id_aula) => {
   const anuncios = await AnuncioProfesor.find({ id_aula })
@@ -111,11 +145,11 @@ exports.getAnunciosByAula = async (id_aula) => {
     .sort({ fecha_publicacion: -1 })
     .lean();
 
-  return anuncios;
+  return await enriquecerAnuncios(anuncios);
 };
 
 /**
- * Obtiene todos los anuncios creados por un profesor
+ * Obtiene todos los anuncios creados por un profesor, con estado y reacciones adjuntas
  */
 exports.getAnunciosByProfesor = async (id_profesor) => {
   const anuncios = await AnuncioProfesor.find({ id_profesor })
@@ -127,11 +161,11 @@ exports.getAnunciosByProfesor = async (id_profesor) => {
     .sort({ fecha_publicacion: -1 })
     .lean();
 
-  return anuncios;
+  return await enriquecerAnuncios(anuncios);
 };
 
 /**
- * Obtiene un anuncio por ID
+ * Obtiene un anuncio por ID, con estado y reacciones adjuntas
  */
 exports.getAnuncioById = async (id) => {
   const anuncio = await AnuncioProfesor.findById(id)
@@ -148,14 +182,14 @@ exports.getAnuncioById = async (id) => {
     throw err;
   }
 
-  return anuncio;
+  return await enriquecerAnuncio(anuncio);
 };
 
 /**
  * Crea un nuevo anuncio
  */
 exports.createAnuncio = async (data) => {
-  const { id_profesor, id_aula, titulo, descripcion, color, fecha_publicacion } = data;
+  const { id_profesor, id_aula, titulo, descripcion, color, fecha_publicacion, fecha_vencimiento } = data;
 
   // Validar que el profesor existe
   const profesor = await Persona.findById(id_profesor);
@@ -186,7 +220,8 @@ exports.createAnuncio = async (data) => {
     titulo,
     descripcion,
     color: color || '#3B82F6',
-    fecha_publicacion: fecha_publicacion || new Date()
+    fecha_publicacion: fecha_publicacion || new Date(),
+    fecha_vencimiento: fecha_vencimiento || null
   });
 
   await nuevoAnuncio.save();
@@ -202,10 +237,12 @@ exports.createAnuncio = async (data) => {
   });
 
   // Retornar con populate
-  return await AnuncioProfesor.findById(nuevoAnuncio._id)
+  const creado = await AnuncioProfesor.findById(nuevoAnuncio._id)
     .populate('id_profesor', 'nombres apellido_paterno apellido_materno')
     .populate('id_aula')
     .lean();
+
+  return await enriquecerAnuncio(creado);
 };
 
 /**
@@ -213,7 +250,7 @@ exports.createAnuncio = async (data) => {
  */
 exports.updateAnuncio = async (id, data) => {
   const anuncio = await AnuncioProfesor.findById(id);
-  
+
   if (!anuncio) {
     const err = new Error('Anuncio no encontrado');
     err.statusCode = 404;
@@ -221,8 +258,8 @@ exports.updateAnuncio = async (id, data) => {
   }
 
   // Actualizar campos permitidos
-  const camposActualizables = ['titulo', 'descripcion', 'color', 'fecha_publicacion'];
-  
+  const camposActualizables = ['titulo', 'descripcion', 'color', 'fecha_publicacion', 'fecha_vencimiento'];
+
   camposActualizables.forEach(campo => {
     if (data[campo] !== undefined) {
       anuncio[campo] = data[campo];
@@ -232,10 +269,12 @@ exports.updateAnuncio = async (id, data) => {
   await anuncio.save();
 
   // Retornar con populate
-  return await AnuncioProfesor.findById(id)
+  const actualizado = await AnuncioProfesor.findById(id)
     .populate('id_profesor', 'nombres apellido_paterno apellido_materno')
     .populate('id_aula')
     .lean();
+
+  return await enriquecerAnuncio(actualizado);
 };
 
 /**
@@ -276,5 +315,5 @@ exports.getAnunciosRecientesByProfesor = async (id_profesor, limite = 10) => {
     .limit(limite)
     .lean();
 
-  return anuncios;
+  return await enriquecerAnuncios(anuncios);
 };

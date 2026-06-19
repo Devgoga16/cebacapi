@@ -29,6 +29,12 @@ const AnuncioProfesorSchema = new mongoose.Schema({
   fecha_publicacion: {
     type: Date,
     default: Date.now
+  },
+  fecha_vencimiento: {
+    type: Date,
+    required: false,
+    default: null
+    // Hasta qué día se muestra el anuncio. Pasada esta fecha, el anuncio se considera "vencido".
   }
 }, {
   collection: 'anunciosprofesor',
