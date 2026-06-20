@@ -209,3 +209,28 @@ exports.getReporteExcelAula = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.crearGrupoWhatsappAula = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const resultado = await aulasService.crearGrupoWhatsappAula(id);
+    audit.registrar({
+      accion: 'GRUPO_WHATSAPP_CREADO',
+      entidad: 'Aula',
+      id_entidad: id,
+      actor: req.actor,
+      descripcion: `Grupo de WhatsApp "${resultado.whatsapp?.name}" creado para el aula ${id} con ${resultado.participantes_invitados.length} participantes`,
+      payload: {
+        groupId: resultado.whatsapp?.groupId,
+        name: resultado.whatsapp?.name,
+        participantes_invitados: resultado.participantes_invitados,
+      },
+      request_body: req.body,
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
+    sendResponse(res, { data: resultado, message: 'Grupo de WhatsApp creado exitosamente' });
+  } catch (err) {
+    next(err);
+  }
+};

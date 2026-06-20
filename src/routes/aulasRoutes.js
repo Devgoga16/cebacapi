@@ -700,4 +700,53 @@ router.post('/aulas/:id/iniciar', aulasController.iniciarAula);
  */
 router.get('/aulas/profesor/:id_persona/agrupadas/ciclos', aulasController.getAulasDocenteAgrupadasPorCiclo);
 
+/**
+ * @swagger
+ * /aulas/{id}/grupo-whatsapp:
+ *   post:
+ *     summary: Crea el grupo de WhatsApp de un aula e invita a sus alumnos
+ *     description: |
+ *       Arma el nombre del grupo combinando curso, día/horario y ciclo del aula,
+ *       recolecta los teléfonos válidos (9 dígitos, inician con 9) de los alumnos
+ *       del aula, crea el grupo vía el servicio externo de WhatsApp y guarda
+ *       `nombre_grupo_whatsapp` e `id_grupo_whatsapp` en el aula.
+ *     tags: [Aulas]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID del aula
+ *     responses:
+ *       200:
+ *         description: Grupo de WhatsApp creado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     aula:
+ *                       $ref: '#/components/schemas/Aula'
+ *                     whatsapp:
+ *                       type: object
+ *                       description: Respuesta cruda del servicio de WhatsApp (groupId, name, participants, etc.)
+ *                     participantes_invitados:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: No hay alumnos con teléfono válido en el aula
+ *       404:
+ *         description: Aula, curso o ciclo no encontrado
+ */
+router.post('/aulas/:id/grupo-whatsapp', aulasController.crearGrupoWhatsappAula);
+
 module.exports = router;

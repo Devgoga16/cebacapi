@@ -6,7 +6,14 @@ const Calificacion = require('../models/calificacion');
 const AnuncioProfesor = require('../models/anuncioProfesor');
 const TipoCalificacion = require('../models/tipoCalificacion');
 const RequerimientoAula = require('../models/requerimientoAula');
+const Curso = require('../models/curso');
+const Ciclo = require('../models/ciclo');
+const Persona = require('../models/persona');
+const { crearGrupoWhatsApp } = require('../utils/whatsappNotifier');
 const mongoose = require('mongoose');
+
+// Teléfono peruano: exactamente 9 dígitos, empieza con 9, sin espacios ni otros caracteres
+const TELEFONO_VALIDO_REGEX = /^9\d{8}$/;
 
 function normalizeToLocalDayUTC(dateInput) {
   if (!dateInput) {
@@ -777,5 +784,76 @@ exports.getReporteExcelAula = async (idAula, { desde, hasta } = {}) => {
     asistencias: asistenciasFlat,
     resumen_general: resumenGeneral,
     resumen_por_alumno: resumenPorAlumno,
+  };
+};
+
+/**
+ * Crea el grupo de WhatsApp de un aula:
+ * 1. Arma el nombre del grupo con curso + día/horario + ciclo.
+ * 2. Recolecta los teléfonos válidos de los alumnos del aula (AulaAlumno -> Persona).
+ * 3. Llama al servicio externo de WhatsApp.
+ * 4. Guarda nombre_grupo_whatsapp e id_grupo_whatsapp en el aula.
+ */
+exports.crearGrupoWhatsappAula = async (idAula) => {
+  const aula = await Aula.findById(idAula).lean();
+  if (!aula) {
+    const err = new Error('Aula no encontrada');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const [curso, ciclo] = await Promise.all([
+    Curso.findById(aula.id_curso).select('nombre_curso').lean(),
+    Ciclo.findById(aula.id_ciclo).select('nombre_ciclo').lean(),
+  ]);
+
+  if (!curso) {
+    const err = new Error('Curso del aula no encontrado');
+    err.statusCode = 404;
+    throw err;
+  }
+  if (!ciclo) {
+    const err = new Error('Ciclo del aula no encontrado');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const nombreGrupo = `${curso.nombre_curso} - ${aula.dia} ${aula.hora_inicio} a ${aula.hora_fin} - ${ciclo.nombre_ciclo}`;
+
+  // Recolectar y validar teléfonos de los alumnos del aula
+  const aulaAlumnos = await AulaAlumno.find({ id_aula: idAula })
+    .populate({ path: 'id_alumno', select: 'telefono' })
+    .lean();
+
+  const telefonosUnicos = new Set();
+  for (const aa of aulaAlumnos) {
+    const telefono = aa.id_alumno?.telefono;
+    if (telefono && TELEFONO_VALIDO_REGEX.test(telefono)) {
+      telefonosUnicos.add(telefono);
+    }
+  }
+
+  const participantes = Array.from(telefonosUnicos);
+  if (participantes.length === 0) {
+    const err = new Error('No hay alumnos con un teléfono válido (9 dígitos, debe iniciar con 9) en esta aula');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const respuestaWhatsapp = await crearGrupoWhatsApp(nombreGrupo, participantes);
+
+  const aulaActualizada = await Aula.findByIdAndUpdate(
+    idAula,
+    {
+      nombre_grupo_whatsapp: respuestaWhatsapp.data?.name || nombreGrupo,
+      id_grupo_whatsapp: respuestaWhatsapp.data?.groupId || null,
+    },
+    { new: true }
+  ).lean();
+
+  return {
+    aula: aulaActualizada,
+    whatsapp: respuestaWhatsapp.data,
+    participantes_invitados: participantes,
   };
 };

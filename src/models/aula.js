@@ -13,7 +13,9 @@ const AulaSchema = new mongoose.Schema({
   fecha_fin: { type: Date, required: true },
   estado: { type: String, enum: ['creada', 'iniciada', 'terminada'], required: true, default: 'creada' },
   linkWhatsApp: { type: String },
-  numeroAula: { type: String }
+  numeroAula: { type: String },
+  nombre_grupo_whatsapp: { type: String, default: null },
+  id_grupo_whatsapp: { type: String, default: null }
 }, {
   collection: 'aulas',
   timestamps: true
