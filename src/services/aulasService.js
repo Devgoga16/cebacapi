@@ -9,7 +9,7 @@ const RequerimientoAula = require('../models/requerimientoAula');
 const Curso = require('../models/curso');
 const Ciclo = require('../models/ciclo');
 const Persona = require('../models/persona');
-const { crearGrupoWhatsApp } = require('../utils/whatsappNotifier');
+const { crearGrupoWhatsApp, agregarParticipantesGrupo, sleep } = require('../utils/whatsappNotifier');
 const mongoose = require('mongoose');
 
 // Teléfono peruano: exactamente 9 dígitos, empieza con 9, sin espacios ni otros caracteres
@@ -840,13 +840,35 @@ exports.crearGrupoWhatsappAula = async (idAula) => {
     throw err;
   }
 
-  const respuestaWhatsapp = await crearGrupoWhatsApp(nombreGrupo, participantes);
+  // WhatsApp aplica límites anti-spam si se agrega a muchas personas de golpe:
+  // se crea el grupo con un primer lote pequeño y el resto se agrega en lotes de 5.
+  const TAMANO_LOTE = 5;
+  const ESPERA_ENTRE_LOTES_MS = 8000;
+
+  const [primerLote, ...lotesRestantes] = chunk(participantes, TAMANO_LOTE);
+
+  const respuestaWhatsapp = await crearGrupoWhatsApp(nombreGrupo, primerLote);
+  const groupId = respuestaWhatsapp.data?.groupId;
+
+  const fallosAgregar = [];
+  for (const lote of lotesRestantes) {
+    if (!groupId) {
+      fallosAgregar.push({ lote, error: 'No se obtuvo groupId al crear el grupo' });
+      continue;
+    }
+    await sleep(ESPERA_ENTRE_LOTES_MS);
+    try {
+      await agregarParticipantesGrupo(groupId, lote);
+    } catch (err) {
+      fallosAgregar.push({ lote, error: err.message });
+    }
+  }
 
   const aulaActualizada = await Aula.findByIdAndUpdate(
     idAula,
     {
       nombre_grupo_whatsapp: respuestaWhatsapp.data?.name || nombreGrupo,
-      id_grupo_whatsapp: respuestaWhatsapp.data?.groupId || null,
+      id_grupo_whatsapp: groupId || null,
     },
     { new: true }
   ).lean();
@@ -855,5 +877,15 @@ exports.crearGrupoWhatsappAula = async (idAula) => {
     aula: aulaActualizada,
     whatsapp: respuestaWhatsapp.data,
     participantes_invitados: participantes,
+    participantes_pendientes: fallosAgregar.flatMap((f) => f.lote),
+    errores_al_agregar: fallosAgregar.length ? fallosAgregar.map((f) => f.error) : undefined,
   };
 };
+
+function chunk(array, size) {
+  const result = [];
+  for (let i = 0; i < array.length; i += size) {
+    result.push(array.slice(i, i + size));
+  }
+  return result;
+}
