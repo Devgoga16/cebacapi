@@ -9,6 +9,8 @@ const AsistenciaSchema = new mongoose.Schema(
     estado: { type: String, enum: ['presente', 'ausente', 'tarde', 'justificado'], required: true },
     observacion: { type: String, required: false, trim: true },
     tomado_por: { type: mongoose.Schema.Types.ObjectId, ref: 'Persona', required: false },
+    // Motivo obligatorio cuando "fecha" no corresponde al día de la semana configurado en el aula (Aula.dia)
+    motivo_fecha_diferente: { type: String, required: false, trim: true, default: '' },
   },
   {
     collection: 'asistencias',

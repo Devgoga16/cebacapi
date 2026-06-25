@@ -100,6 +100,9 @@ router.get('/asistencias/roster/:id_aula', asistenciasController.getRosterDeAula
  *               tomado_por:
  *                 type: string
  *                 description: ID de la persona que registra la asistencia
+ *               motivo_fecha_diferente:
+ *                 type: string
+ *                 description: Requerido cuando "fecha" no corresponde al día de la semana configurado en el aula (Aula.dia)
  *               items:
  *                 type: array
  *                 items:
@@ -107,6 +110,10 @@ router.get('/asistencias/roster/:id_aula', asistenciasController.getRosterDeAula
  *     responses:
  *       200:
  *         description: Resultado del upsert masivo de asistencias
+ *       400:
+ *         description: Datos inválidos, o falta motivo_fecha_diferente cuando la fecha no corresponde al día configurado del aula
+ *       403:
+ *         description: tomado_por no es el docente ni el coordinador del aula
  *         content:
  *           application/json:
  *             schema:

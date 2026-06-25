@@ -20,22 +20,25 @@ exports.setTiposCalificacion = async (req, res, next) => {
       });
     }
 
-    const tiposCreados = await tiposCalificacionService.setTiposCalificacion(idAula, tipos);
+    const { tipos: tiposCreados, calificacionesEliminadas } = await tiposCalificacionService.setTiposCalificacion(idAula, tipos);
     audit.registrar({
       accion: 'TIPOS_CALIFICACION_CONFIGURADOS',
       entidad: 'TipoCalificacion',
       id_entidad: idAula,
       actor: req.actor,
-      descripcion: `Tipos de calificación configurados para el aula ${idAula} — ${tipos.length} tipos`,
-      payload: { idAula, tipos },
+      descripcion: `Tipos de calificación configurados para el aula ${idAula} — ${tipos.length} tipos`
+        + (calificacionesEliminadas > 0 ? ` (se eliminaron ${calificacionesEliminadas} calificaciones de los tipos anteriores)` : ''),
+      payload: { idAula, tipos, calificacionesEliminadas },
       request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
 
     sendResponse(res, {
-      data: tiposCreados,
-      message: 'Tipos de calificación configurados exitosamente',
+      data: { tipos: tiposCreados, calificacionesEliminadas },
+      message: calificacionesEliminadas > 0
+        ? `Tipos de calificación actualizados. Se eliminaron ${calificacionesEliminadas} calificación(es) que estaban asociadas a los tipos anteriores.`
+        : 'Tipos de calificación configurados exitosamente',
       action_code: 201
     });
   } catch (err) {
@@ -74,16 +77,19 @@ exports.deleteTiposCalificacionByAula = async (req, res, next) => {
       entidad: 'TipoCalificacion',
       id_entidad: idAula,
       actor: req.actor,
-      descripcion: `Tipos de calificación del aula ${idAula} eliminados`,
-      payload: { deletedCount: result.deletedCount },
+      descripcion: `Tipos de calificación del aula ${idAula} eliminados`
+        + (result.calificacionesEliminadas > 0 ? ` (se eliminaron ${result.calificacionesEliminadas} calificaciones asociadas)` : ''),
+      payload: { deletedCount: result.deletedCount, calificacionesEliminadas: result.calificacionesEliminadas },
       request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
     });
 
     sendResponse(res, {
-      data: { deletedCount: result.deletedCount },
-      message: 'Tipos de calificación eliminados'
+      data: { deletedCount: result.deletedCount, calificacionesEliminadas: result.calificacionesEliminadas },
+      message: result.calificacionesEliminadas > 0
+        ? `Tipos de calificación eliminados. Se eliminaron ${result.calificacionesEliminadas} calificación(es) asociadas.`
+        : 'Tipos de calificación eliminados'
     });
   } catch (err) {
     next(err);

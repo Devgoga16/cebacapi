@@ -13,14 +13,15 @@ exports.getRosterDeAulaParaAsistencia = async (req, res, next) => {
 
 exports.tomarAsistencia = async (req, res, next) => {
   try {
-    const { items, tomado_por, fecha } = req.body || {};
-    const result = await asistenciasService.tomarAsistencia({ items, tomado_por, fecha });
+    const { items, tomado_por, fecha, motivo_fecha_diferente } = req.body || {};
+    const result = await asistenciasService.tomarAsistencia({ items, tomado_por, fecha, motivo_fecha_diferente });
     audit.registrar({
       accion: 'ASISTENCIA_REGISTRADA',
       entidad: 'Asistencia',
       actor: req.actor,
-      descripcion: `Asistencia del ${fecha || 'fecha no especificada'} registrada por ${tomado_por || 'desconocido'} — ${(items || []).length} alumnos`,
-      payload: { fecha, tomado_por, total: (items || []).length },
+      descripcion: `Asistencia del ${fecha || 'fecha no especificada'} registrada por ${tomado_por || 'desconocido'} — ${(items || []).length} alumnos`
+        + (motivo_fecha_diferente ? ` (fecha distinta al día del aula, motivo: "${motivo_fecha_diferente}")` : ''),
+      payload: { fecha, tomado_por, total: (items || []).length, motivo_fecha_diferente: motivo_fecha_diferente || undefined },
       request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],

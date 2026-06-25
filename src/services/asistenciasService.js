@@ -3,6 +3,12 @@ const AulaAlumno = require('../models/aulaalumno');
 const Aula = require('../models/aula');
 const Persona = require('../models/persona');
 
+const DIAS_SEMANA_POR_INDICE_UTC = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+function nombreDiaSemana(fechaUTC) {
+  return DIAS_SEMANA_POR_INDICE_UTC[fechaUTC.getUTCDay()];
+}
+
 function normalizeToLocalDayUTC(dateInput) {
   if (!dateInput) {
     const now = new Date();
@@ -58,9 +64,13 @@ exports.getRosterDeAulaParaAsistencia = async (id_aula, fecha) => {
 };
 
 // Tomar asistencia en lote. items: [{id_aula, id_alumno, estado, observacion}]
-exports.tomarAsistencia = async ({ items, tomado_por, fecha }) => {
+exports.tomarAsistencia = async ({ items, tomado_por, fecha, motivo_fecha_diferente }) => {
   if (!Array.isArray(items) || items.length === 0) {
     const err = new Error('items debe ser un arreglo con al menos un elemento');
+    err.statusCode = 400; throw err;
+  }
+  if (!tomado_por) {
+    const err = new Error('tomado_por es requerido');
     err.statusCode = 400; throw err;
   }
   const fechaClave = normalizeToLocalDayUTC(fecha);
@@ -77,20 +87,62 @@ exports.tomarAsistencia = async ({ items, tomado_por, fecha }) => {
     }
   }
 
-  // Upsert por (id_aula, id_alumno, fecha)
-  const ops = items.map((it) => ({
-    updateOne: {
-      filter: { id_aula: it.id_aula, id_alumno: it.id_alumno, fecha: fechaClave },
-      update: {
-        $set: {
-          estado: it.estado,
-          observacion: it.observacion || '',
-          tomado_por: tomado_por || null,
-        }
-      },
-      upsert: true,
+  // Solo el docente o el coordinador asignados al aula pueden registrar su asistencia.
+  // Evita que cualquier id_persona enviado desde el cliente escriba asistencia
+  // de un aula que no le corresponde.
+  const idsAulasUnicas = [...new Set(items.map((it) => String(it.id_aula)))];
+  const aulasInvolucradas = await Aula.find({ _id: { $in: idsAulasUnicas } })
+    .select('id_profesor id_coordinador dia')
+    .lean();
+  const aulaPorId = new Map(aulasInvolucradas.map((a) => [String(a._id), a]));
+  const diaSeleccionado = nombreDiaSemana(fechaClave);
+  for (const idAula of idsAulasUnicas) {
+    const aula = aulaPorId.get(idAula);
+    if (!aula) {
+      const err = new Error(`Aula ${idAula} no encontrada`);
+      err.statusCode = 404; throw err;
     }
-  }));
+    const autorizados = new Set([
+      aula.id_profesor ? String(aula.id_profesor) : null,
+      aula.id_coordinador ? String(aula.id_coordinador) : null,
+    ].filter(Boolean));
+    if (!autorizados.has(String(tomado_por))) {
+      const err = new Error('No tienes permiso para registrar asistencia en esta aula');
+      err.statusCode = 403; throw err;
+    }
+    // La fecha elegida no coincide con el día de la semana configurado para el aula:
+    // se exige un motivo para dejar constancia de por qué se registra ese día.
+    if (aula.dia && aula.dia !== diaSeleccionado && !String(motivo_fecha_diferente || '').trim()) {
+      const err = new Error(
+        `La fecha seleccionada es ${diaSeleccionado}, pero esta aula está configurada para los días ${aula.dia}. Indica un motivo para continuar.`
+      );
+      err.statusCode = 400;
+      err.code = 'FECHA_DIA_DIFERENTE';
+      throw err;
+    }
+  }
+  const motivoFinal = String(motivo_fecha_diferente || '').trim();
+
+  // Upsert por (id_aula, id_alumno, fecha). El motivo solo se guarda en las aulas
+  // cuyo día configurado realmente difiere de la fecha elegida.
+  const ops = items.map((it) => {
+    const aulaDelItem = aulaPorId.get(String(it.id_aula));
+    const huboMismatch = Boolean(aulaDelItem?.dia && aulaDelItem.dia !== diaSeleccionado);
+    return {
+      updateOne: {
+        filter: { id_aula: it.id_aula, id_alumno: it.id_alumno, fecha: fechaClave },
+        update: {
+          $set: {
+            estado: it.estado,
+            observacion: it.observacion || '',
+            tomado_por: tomado_por || null,
+            motivo_fecha_diferente: huboMismatch ? motivoFinal : '',
+          }
+        },
+        upsert: true,
+      }
+    };
+  });
 
   const result = await Asistencia.bulkWrite(ops, { ordered: false });
   return {

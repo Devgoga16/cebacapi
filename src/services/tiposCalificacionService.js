@@ -1,5 +1,6 @@
 const TipoCalificacion = require('../models/tipoCalificacion');
 const Aula = require('../models/aula');
+const Calificacion = require('../models/calificacion');
 
 /**
  * Valida que los porcentajes sumen exactamente 100
@@ -55,8 +56,23 @@ exports.setTiposCalificacion = async (idAula, tiposData) => {
     throw err;
   }
 
+  // Tipos existentes antes de reemplazarlos: se necesitan sus _id para poder
+  // eliminar también las calificaciones que quedarían huérfanas (referencian
+  // un id_tipo_calificacion que está por desaparecer).
+  const tiposAnteriores = await TipoCalificacion.find({ id_aula: idAula }).select('_id');
+  const idsTiposAnteriores = tiposAnteriores.map((t) => t._id);
+
   // Eliminar tipos de calificación existentes para esta aula
   await TipoCalificacion.deleteMany({ id_aula: idAula });
+
+  // Eliminar las calificaciones ya registradas con esos tipos: al reemplazar
+  // los tipos se generan nuevos _id, por lo que las notas viejas quedarían
+  // apuntando a un tipo inexistente si no se eliminan también.
+  let calificacionesEliminadas = 0;
+  if (idsTiposAnteriores.length > 0) {
+    const resultado = await Calificacion.deleteMany({ id_tipo_calificacion: { $in: idsTiposAnteriores } });
+    calificacionesEliminadas = resultado.deletedCount || 0;
+  }
 
   // Crear los nuevos tipos de calificación
   const tiposCalificacion = tiposData.map((tipo, index) => ({
@@ -69,7 +85,7 @@ exports.setTiposCalificacion = async (idAula, tiposData) => {
 
   const tiposCreados = await TipoCalificacion.insertMany(tiposCalificacion);
 
-  return tiposCreados;
+  return { tipos: tiposCreados, calificacionesEliminadas };
 };
 
 /**
@@ -84,11 +100,22 @@ exports.getTiposCalificacionByAula = async (idAula) => {
 };
 
 /**
- * Elimina los tipos de calificación de un aula
+ * Elimina los tipos de calificación de un aula, junto con las calificaciones
+ * que estaban registradas con esos tipos (de lo contrario quedarían huérfanas).
  */
 exports.deleteTiposCalificacionByAula = async (idAula) => {
+  const tipos = await TipoCalificacion.find({ id_aula: idAula }).select('_id');
+  const idsTipos = tipos.map((t) => t._id);
+
   const result = await TipoCalificacion.deleteMany({ id_aula: idAula });
-  return result;
+
+  let calificacionesEliminadas = 0;
+  if (idsTipos.length > 0) {
+    const resultadoCalificaciones = await Calificacion.deleteMany({ id_tipo_calificacion: { $in: idsTipos } });
+    calificacionesEliminadas = resultadoCalificaciones.deletedCount || 0;
+  }
+
+  return { ...result, calificacionesEliminadas };
 };
 
 /**

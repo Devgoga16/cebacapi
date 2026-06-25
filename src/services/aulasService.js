@@ -55,6 +55,26 @@ exports.getAllAulas = async () => {
     },
     {
       $lookup: {
+        from: 'personas',
+        localField: 'id_coordinador',
+        foreignField: '_id',
+        as: 'id_coordinador',
+        pipeline: [
+          {
+            $project: {
+              nombres: 1,
+              apellido_paterno: 1,
+              apellido_materno: 1,
+              email: 1,
+              telefono: 1,
+              numero_documento: 1,
+            }
+          }
+        ]
+      }
+    },
+    {
+      $lookup: {
         from: 'cursos',
         localField: 'id_curso',
         foreignField: '_id',
@@ -80,6 +100,7 @@ exports.getAllAulas = async () => {
     {
       $addFields: {
         'id_profesor': { $arrayElemAt: ['$id_profesor', 0] },
+        'id_coordinador': { $arrayElemAt: ['$id_coordinador', 0] },
         'id_curso': {
           $mergeObjects: [
             { $arrayElemAt: ['$id_curso_temp', 0] },
@@ -102,16 +123,17 @@ exports.getAllAulas = async () => {
 };
 
 exports.getAulaById = async (id) => {
-  return await Aula.findById(id).populate('id_profesor id_curso id_ciclo');
+  return await Aula.findById(id).populate('id_profesor id_coordinador id_curso id_ciclo');
 };
 
 exports.createAula = async (data) => {
   const aula = new Aula(data);
-  return await aula.save();
+  await aula.save();
+  return await aula.populate('id_profesor id_coordinador id_curso id_ciclo');
 };
 
 exports.updateAula = async (id, data) => {
-  return await Aula.findByIdAndUpdate(id, data, { new: true }).populate('id_profesor id_curso id_ciclo');
+  return await Aula.findByIdAndUpdate(id, data, { new: true }).populate('id_profesor id_coordinador id_curso id_ciclo');
 };
 
 exports.deleteAula = async (id) => {
@@ -178,13 +200,121 @@ exports.getAulasByCursoAndCiclo = async (id_curso, id_ciclo) => {
   if (id_curso) filter.id_curso = id_curso;
   if (id_ciclo) filter.id_ciclo = id_ciclo;
 
-  return await Aula.find(filter)
-    .populate('id_profesor id_curso id_ciclo')
+  const aulas = await Aula.find(filter)
+    .populate('id_profesor id_coordinador id_curso id_ciclo')
     .populate({
       path: 'id_curso',
       populate: { path: 'id_nivel' }
     })
     .lean();
+
+  if (aulas.length === 0) return aulas;
+
+  // Para cada aula, indicar si ya se registró al menos una calificación
+  const idsAulas = aulas.map((a) => a._id);
+  const aulasConNotas = await Calificacion.distinct('id_aula', { id_aula: { $in: idsAulas } });
+  const setConNotas = new Set(aulasConNotas.map((id) => String(id)));
+
+  return aulas.map((a) => ({
+    ...a,
+    tiene_calificaciones: setConNotas.has(String(a._id)),
+  }));
+};
+
+// Para un conjunto de aulas, devuelve un mapa id_aula -> { fecha, dia } de la última
+// fecha en que se registró asistencia (cualquier alumno) en esa aula.
+const DIAS_SEMANA_POR_INDICE_UTC = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+async function getUltimaAsistenciaPorAula(idsAulas) {
+  if (!idsAulas.length) return new Map();
+  const idsObjeto = idsAulas.map((id) => new mongoose.Types.ObjectId(String(id)));
+  const agg = await Asistencia.aggregate([
+    { $match: { id_aula: { $in: idsObjeto } } },
+    { $group: { _id: '$id_aula', ultima_fecha: { $max: '$fecha' } } },
+  ]);
+  const mapa = new Map();
+  for (const row of agg) {
+    const fecha = row.ultima_fecha;
+    mapa.set(String(row._id), {
+      fecha,
+      dia: DIAS_SEMANA_POR_INDICE_UTC[new Date(fecha).getUTCDay()],
+    });
+  }
+  return mapa;
+}
+
+// Lista todas las aulas donde la persona es coordinador
+exports.getAulasPorCoordinador = async (id_persona) => {
+  if (!id_persona) {
+    const err = new Error('id_persona es requerido');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const aulas = await Aula.find({ id_coordinador: id_persona })
+    .populate('id_profesor')
+    .populate({
+      path: 'id_curso',
+      populate: { path: 'id_nivel' }
+    })
+    .populate('id_ciclo')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const ultimasPorAula = await getUltimaAsistenciaPorAula(aulas.map((a) => a._id));
+  return aulas.map((a) => ({
+    ...a,
+    ultima_asistencia: ultimasPorAula.get(String(a._id)) || null,
+  }));
+};
+
+// Devuelve los docentes (sin duplicados) de las aulas asignadas a un coordinador,
+// incluyendo su última conexión (Usuario.last_login) y el detalle de cada aula
+// donde dicho docente está a cargo bajo ese coordinador.
+exports.getDocentesPorCoordinador = async (id_persona) => {
+  if (!id_persona) {
+    const err = new Error('id_persona es requerido');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const aulas = await Aula.find({ id_coordinador: id_persona })
+    .populate({
+      path: 'id_profesor',
+      populate: { path: 'id_user', select: 'username last_login active' },
+    })
+    .populate({
+      path: 'id_curso',
+      populate: { path: 'id_nivel' }
+    })
+    .populate('id_ciclo')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const docentesMap = new Map();
+  for (const aula of aulas) {
+    const profesor = aula.id_profesor;
+    if (!profesor || !profesor._id) continue;
+    const key = String(profesor._id);
+    if (!docentesMap.has(key)) {
+      docentesMap.set(key, {
+        docente: profesor,
+        last_login: profesor.id_user?.last_login || null,
+        aulas: [],
+      });
+    }
+    docentesMap.get(key).aulas.push({
+      _id: aula._id,
+      id_curso: aula.id_curso,
+      id_ciclo: aula.id_ciclo,
+      dia: aula.dia,
+      hora_inicio: aula.hora_inicio,
+      hora_fin: aula.hora_fin,
+      estado: aula.estado,
+      numeroAula: aula.numeroAula,
+    });
+  }
+
+  return Array.from(docentesMap.values());
 };
 
 // Devuelve dos listas para un aula: alumnos asignados (AulaAlumnos) e inscripciones

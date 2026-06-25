@@ -23,6 +23,11 @@ exports.login = async (username, password) => {
   }
   if (!valid) return null;
 
+  // Registrar la fecha/hora de este login. Se hace antes de devolver la
+  // respuesta para que "última conexión" siempre refleje el login más reciente.
+  usuario.last_login = new Date();
+  await usuario.save();
+
   // Traer datos de persona
   const persona = await Persona.findOne({ id_user: usuario._id });
 
@@ -45,6 +50,7 @@ exports.login = async (username, password) => {
       username: usuario.username,
       roles: usuario.roles,
       permissions: usuario.permissions || [],
+      last_login: usuario.last_login,
     },
     persona,
     roles,

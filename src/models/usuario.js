@@ -32,6 +32,10 @@ const UsuarioSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    last_login: {
+      type: Date,
+      default: null,
+    },
   },
   {
     collection: "usuarios",

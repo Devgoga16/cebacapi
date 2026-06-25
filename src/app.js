@@ -34,6 +34,7 @@ const reportesRoutes = require('./routes/reportesRoutes');
 const auditLogsRoutes = require('./routes/auditLogsRoutes');
 const notificacionesRoutes = require('./routes/notificacionesRoutes');
 const reaccionesRoutes = require('./routes/reaccionesRoutes');
+const penasRoutes = require('./routes/penasRoutes');
 
 const app = express();
 app.use(cors());
@@ -130,6 +131,8 @@ app.use('/notificaciones', notificacionesRoutes);
 app.use('/api/notificaciones', notificacionesRoutes);
 app.use('/reacciones', reaccionesRoutes);
 app.use('/api/reacciones', reaccionesRoutes);
+app.use('/penas', penasRoutes);
+app.use('/api/penas', penasRoutes);
 
 // Middleware de manejo de errores
 app.use(errorHandler);

@@ -23,6 +23,9 @@ const aulasController = require('../controllers/aulasController');
  *         id_profesor:
  *           type: string
  *           description: ID de la persona (ObjectId)
+ *         id_coordinador:
+ *           type: string
+ *           description: ID de la persona coordinadora del aula (ObjectId)
  *         id_curso:
  *           type: string
  *           description: ID del curso (ObjectId)
@@ -699,6 +702,85 @@ router.post('/aulas/:id/iniciar', aulasController.iniciarAula);
  *                   type: integer
  */
 router.get('/aulas/profesor/:id_persona/agrupadas/ciclos', aulasController.getAulasDocenteAgrupadasPorCiclo);
+
+/**
+ * @swagger
+ * /aulas/coordinador/{id_persona}:
+ *   get:
+ *     summary: Lista todas las aulas donde la persona es coordinador
+ *     tags: [Aulas]
+ *     parameters:
+ *       - in: path
+ *         name: id_persona
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID de la persona (coordinador)
+ *     responses:
+ *       200:
+ *         description: Lista de aulas asignadas al coordinador
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Aula'
+ *                 message:
+ *                   type: string
+ *                 action_code:
+ *                   type: integer
+ */
+router.get('/aulas/coordinador/:id_persona', aulasController.getAulasByCoordinador);
+
+/**
+ * @swagger
+ * /aulas/coordinador/{id_persona}/docentes:
+ *   get:
+ *     summary: Lista los docentes (sin duplicados) de las aulas asignadas a un coordinador, con su última conexión
+ *     tags: [Aulas]
+ *     parameters:
+ *       - in: path
+ *         name: id_persona
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID de la persona (coordinador)
+ *     responses:
+ *       200:
+ *         description: Lista de docentes con su última conexión y aulas asignadas
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 state:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       docente:
+ *                         type: object
+ *                       last_login:
+ *                         type: string
+ *                         format: date-time
+ *                         nullable: true
+ *                       aulas:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                 message:
+ *                   type: string
+ *                 action_code:
+ *                   type: integer
+ */
+router.get('/aulas/coordinador/:id_persona/docentes', aulasController.getDocentesByCoordinador);
 
 /**
  * @swagger

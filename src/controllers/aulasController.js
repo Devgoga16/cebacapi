@@ -24,18 +24,19 @@ exports.getAulaById = async (req, res, next) => {
 
 exports.createAula = async (req, res, next) => {
   try {
-    const errors = validateAulaInput(req.body);
+    const normalizedBody = normalizeAulaFields({ ...req.body });
+    const errors = validateAulaInput(normalizedBody);
     if (errors.length) {
       return sendResponse(res, { state: 'failed', data: null, message: errors.join(', '), action_code: 400 });
     }
-    const newAula = await aulasService.createAula(req.body);
+    const newAula = await aulasService.createAula(normalizedBody);
     audit.registrar({
       accion: 'AULA_CREADA',
       entidad: 'Aula',
       id_entidad: newAula._id?.toString(),
       actor: req.actor,
-      descripcion: `Aula creada para curso ${req.body.id_curso} en ciclo ${req.body.id_ciclo}`,
-      payload: req.body,
+      descripcion: `Aula creada para curso ${normalizedBody.id_curso} en ciclo ${normalizedBody.id_ciclo}`,
+      payload: normalizedBody,
       request_body: req.body,
       ip: req.ip,
       user_agent: req.headers['user-agent'],
@@ -54,6 +55,11 @@ function normalizeAulaFields(body) {
   if (body.numero_aula) {
     body.numeroAula = body.numero_aula;
     delete body.numero_aula;
+  }
+  // id_coordinador es opcional: si llega vacío ('' o null), se guarda como null
+  // en vez de intentar castear un string vacío a ObjectId (lo cual falla).
+  if ('id_coordinador' in body && !body.id_coordinador) {
+    body.id_coordinador = null;
   }
   return body;
 }
@@ -142,6 +148,26 @@ exports.getAulasByCursoAndCiclo = async (req, res, next) => {
     const { id_curso, id_ciclo } = req.params;
     const aulas = await aulasService.getAulasByCursoAndCiclo(id_curso, id_ciclo);
     sendResponse(res, { data: aulas });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getAulasByCoordinador = async (req, res, next) => {
+  try {
+    const { id_persona } = req.params;
+    const aulas = await aulasService.getAulasPorCoordinador(id_persona);
+    sendResponse(res, { data: aulas });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getDocentesByCoordinador = async (req, res, next) => {
+  try {
+    const { id_persona } = req.params;
+    const docentes = await aulasService.getDocentesPorCoordinador(id_persona);
+    sendResponse(res, { data: docentes });
   } catch (err) {
     next(err);
   }
