@@ -215,9 +215,14 @@ exports.getAulasByCursoAndCiclo = async (id_curso, id_ciclo) => {
   const aulasConNotas = await Calificacion.distinct('id_aula', { id_aula: { $in: idsAulas } });
   const setConNotas = new Set(aulasConNotas.map((id) => String(id)));
 
+  // Para cada aula, indicar si ya se tomó asistencia y cuándo fue la última vez
+  const mapaUltimaAsistencia = await getUltimaAsistenciaPorAula(idsAulas);
+
   return aulas.map((a) => ({
     ...a,
     tiene_calificaciones: setConNotas.has(String(a._id)),
+    tiene_asistencias: mapaUltimaAsistencia.has(String(a._id)),
+    ultima_asistencia: mapaUltimaAsistencia.get(String(a._id)) || null,
   }));
 };
 

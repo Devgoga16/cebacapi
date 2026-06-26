@@ -183,6 +183,24 @@ router.get('/asistencias/aula/:id_aula', asistenciasController.getAsistenciasDeA
 
 /**
  * @swagger
+ * /asistencias/aula/{id_aula}/fechas:
+ *   get:
+ *     summary: Lista las fechas en que se ha registrado asistencia en un aula, con totales por estado
+ *     tags: [Asistencias]
+ *     parameters:
+ *       - in: path
+ *         name: id_aula
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Lista de fechas con totales por estado
+ */
+router.get('/asistencias/aula/:id_aula/fechas', asistenciasController.getFechasAsistenciaDeAula);
+
+/**
+ * @swagger
  * /asistencias/aula/{id_aula}/alumno/{id_alumno}:
  *   get:
  *     summary: Obtiene el resumen y detalle de asistencia de un alumno en un aula

@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Asistencia = require('../models/asistencia');
 const AulaAlumno = require('../models/aulaalumno');
 const Aula = require('../models/aula');
@@ -160,6 +161,40 @@ exports.getAsistenciasDeAulaPorFecha = async (id_aula, fecha) => {
     .populate({ path: 'id_alumno', select: 'nombres apellido_paterno apellido_materno numero_documento' })
     .lean();
   return { fecha: fechaClave, asistencias: docs };
+};
+
+// Lista las fechas en las que se ha registrado asistencia en un aula, con
+// totales por estado en cada fecha. Útil para que admin/coordinador vean de
+// un vistazo el historial de tomas de asistencia sin tener que adivinar fechas.
+exports.getFechasAsistenciaDeAula = async (id_aula) => {
+  const agg = await Asistencia.aggregate([
+    { $match: { id_aula: new mongoose.Types.ObjectId(String(id_aula)) } },
+    {
+      $group: {
+        _id: '$fecha',
+        total: { $sum: 1 },
+        presente: { $sum: { $cond: [{ $eq: ['$estado', 'presente'] }, 1, 0] } },
+        ausente: { $sum: { $cond: [{ $eq: ['$estado', 'ausente'] }, 1, 0] } },
+        tarde: { $sum: { $cond: [{ $eq: ['$estado', 'tarde'] }, 1, 0] } },
+        justificado: { $sum: { $cond: [{ $eq: ['$estado', 'justificado'] }, 1, 0] } },
+        motivo_fecha_diferente: { $first: '$motivo_fecha_diferente' },
+      },
+    },
+    { $sort: { _id: -1 } },
+  ]);
+
+  return agg.map((r) => ({
+    fecha: r._id,
+    dia: nombreDiaSemana(new Date(r._id)),
+    total_registros: r.total,
+    totales_por_estado: {
+      presente: r.presente,
+      ausente: r.ausente,
+      tarde: r.tarde,
+      justificado: r.justificado,
+    },
+    motivo_fecha_diferente: r.motivo_fecha_diferente || undefined,
+  }));
 };
 
 // Resumen y detalle de asistencia de un alumno en un aula

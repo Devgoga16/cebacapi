@@ -39,6 +39,14 @@ exports.getAsistenciasDeAulaPorFecha = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+exports.getFechasAsistenciaDeAula = async (req, res, next) => {
+  try {
+    const { id_aula } = req.params;
+    const data = await asistenciasService.getFechasAsistenciaDeAula(id_aula);
+    sendResponse(res, { data, message: 'Fechas de asistencia obtenidas correctamente' });
+  } catch (err) { next(err); }
+};
+
 exports.getResumenDetalleAsistenciaAlumno = async (req, res, next) => {
   try {
     const { id_aula, id_alumno } = req.params;
