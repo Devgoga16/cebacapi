@@ -90,6 +90,26 @@ router.get('/aulas', aulasController.getAllAulas);
 
 /**
  * @swagger
+ * /aulas/calendario-semana:
+ *   get:
+ *     summary: Calendario semanal de aulas del ciclo actual, con estado de asistencia por día
+ *     description: Para la semana (domingo a sábado) que contiene la fecha indicada, lista las aulas del ciclo activo que dictan clase cada día, con horario e indicador de si ya se registró asistencia esa fecha puntual.
+ *     tags: [Aulas]
+ *     parameters:
+ *       - in: query
+ *         name: fecha
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Fecha de referencia (YYYY-MM-DD). Si se omite, se usa hoy.
+ *     responses:
+ *       200:
+ *         description: Calendario semanal obtenido correctamente
+ */
+router.get('/aulas/calendario-semana', aulasController.getCalendarioSemana);
+
+/**
+ * @swagger
  * /aulas/{id}:
  *   get:
  *     summary: Obtiene un aula por id

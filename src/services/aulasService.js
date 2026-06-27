@@ -226,6 +226,113 @@ exports.getAulasByCursoAndCiclo = async (id_curso, id_ciclo) => {
   }));
 };
 
+function normalizarFechaUTC(dateInput) {
+  if (!dateInput) {
+    const now = new Date();
+    return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  }
+  if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateInput)) {
+    const [year, month, day] = dateInput.split('T')[0].split('-').map(Number);
+    return new Date(Date.UTC(year, month - 1, day));
+  }
+  const d = new Date(dateInput);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
+
+/**
+ * Calendario semanal de aulas del ciclo actual: para cada día de la semana que
+ * contiene `fechaRef` (domingo a sábado), lista las aulas que dictan clase ese
+ * día con su horario, e indica si ya se registró asistencia en esa fecha puntual.
+ */
+exports.getCalendarioSemana = async (fechaRef) => {
+  const ref = normalizarFechaUTC(fechaRef);
+  const diaSemanaRef = ref.getUTCDay();
+  const inicioSemana = new Date(ref);
+  inicioSemana.setUTCDate(ref.getUTCDate() - diaSemanaRef);
+
+  const fechasSemana = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(inicioSemana);
+    d.setUTCDate(inicioSemana.getUTCDate() + i);
+    return d;
+  });
+
+  const cicloActual = await Ciclo.findOne({ actual: true }).lean();
+  if (!cicloActual) {
+    return {
+      ciclo: null,
+      semana: { desde: fechasSemana[0], hasta: fechasSemana[6] },
+      dias: fechasSemana.map((fecha, i) => ({ fecha, dia: DIAS_SEMANA_POR_INDICE_UTC[i], aulas: [] })),
+    };
+  }
+
+  const aulas = await Aula.find({ id_ciclo: cicloActual._id })
+    .populate('id_profesor', 'nombres apellido_paterno apellido_materno')
+    .populate('id_coordinador', 'nombres apellido_paterno apellido_materno')
+    .populate('id_curso', 'nombre_curso')
+    .lean();
+
+  const idsAulas = aulas.map((a) => a._id);
+  const asistenciasSemana = idsAulas.length
+    ? await Asistencia.aggregate([
+        { $match: { id_aula: { $in: idsAulas }, fecha: { $gte: fechasSemana[0], $lte: fechasSemana[6] } } },
+        {
+          $group: {
+            _id: { id_aula: '$id_aula', fecha: '$fecha' },
+            total: { $sum: 1 },
+            presente: { $sum: { $cond: [{ $eq: ['$estado', 'presente'] }, 1, 0] } },
+            ausente: { $sum: { $cond: [{ $eq: ['$estado', 'ausente'] }, 1, 0] } },
+            tarde: { $sum: { $cond: [{ $eq: ['$estado', 'tarde'] }, 1, 0] } },
+            justificado: { $sum: { $cond: [{ $eq: ['$estado', 'justificado'] }, 1, 0] } },
+          },
+        },
+      ])
+    : [];
+
+  const mapaAsistencia = new Map();
+  asistenciasSemana.forEach((r) => {
+    const key = `${r._id.id_aula}_${new Date(r._id.fecha).toISOString()}`;
+    mapaAsistencia.set(key, {
+      total_registros: r.total,
+      totales_por_estado: { presente: r.presente, ausente: r.ausente, tarde: r.tarde, justificado: r.justificado },
+    });
+  });
+
+  const dias = fechasSemana.map((fecha, i) => {
+    const nombreDia = DIAS_SEMANA_POR_INDICE_UTC[i];
+    const aulasDia = aulas
+      .filter((a) => a.dia === nombreDia)
+      .map((a) => {
+        const key = `${a._id}_${fecha.toISOString()}`;
+        const asistInfo = mapaAsistencia.get(key) || null;
+        return {
+          id_aula: a._id,
+          curso: a.id_curso?.nombre_curso || null,
+          profesor: a.id_profesor
+            ? `${a.id_profesor.nombres || ''} ${a.id_profesor.apellido_paterno || ''}`.trim()
+            : null,
+          coordinador: a.id_coordinador
+            ? `${a.id_coordinador.nombres || ''} ${a.id_coordinador.apellido_paterno || ''}`.trim()
+            : null,
+          hora_inicio: a.hora_inicio,
+          hora_fin: a.hora_fin,
+          numeroAula: a.numeroAula || null,
+          es_presencial: a.es_presencial,
+          asistencia_tomada: !!asistInfo,
+          totales_asistencia: asistInfo?.totales_por_estado || null,
+        };
+      })
+      .sort((x, y) => (x.hora_inicio || '').localeCompare(y.hora_inicio || ''));
+
+    return { fecha, dia: nombreDia, aulas: aulasDia };
+  });
+
+  return {
+    ciclo: { _id: cicloActual._id, nombre_ciclo: cicloActual.nombre_ciclo },
+    semana: { desde: fechasSemana[0], hasta: fechasSemana[6] },
+    dias,
+  };
+};
+
 // Para un conjunto de aulas, devuelve un mapa id_aula -> { fecha, dia } de la última
 // fecha en que se registró asistencia (cualquier alumno) en esa aula.
 const DIAS_SEMANA_POR_INDICE_UTC = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
