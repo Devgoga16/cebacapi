@@ -20,6 +20,10 @@ async function generarReporteResumenCiclo(idCiclo) {
     aulas.map(a => a.id_profesor?._id?.toString()).filter(Boolean)
   );
 
+  // Cada documento de AulaAlumno es una MATRÍCULA: un alumno inscrito en un
+  // curso/aula puntual. Un mismo alumno puede tener varias matrículas si
+  // lleva más de un curso en el ciclo — por eso "matrículas" y "alumnos
+  // únicos" son números distintos y ambos se reportan por separado.
   const aulaAlumnos = await AulaAlumno.find({ id_aula: { $in: aulaIds } })
     .populate({
       path: 'id_alumno',
@@ -32,13 +36,33 @@ async function generarReporteResumenCiclo(idCiclo) {
     })
     .lean();
 
+  const cursoPorAula = new Map(
+    aulas.map((a) => [String(a._id), a.id_curso?.nombre_curso || 'Sin curso'])
+  );
+
+  // Alumnos únicos + cuántos cursos lleva cada uno
+  const cursosPorAlumno = new Map();
+  for (const aa of aulaAlumnos) {
+    const idAlumno = aa.id_alumno?._id?.toString();
+    if (!idAlumno) continue;
+    if (!cursosPorAlumno.has(idAlumno)) cursosPorAlumno.set(idAlumno, new Set());
+    cursosPorAlumno.get(idAlumno).add(cursoPorAula.get(String(aa.id_aula)) || 'Sin curso');
+  }
+  const totalAlumnosUnicos = cursosPorAlumno.size;
+  const totalMatriculas = aulaAlumnos.length;
+  const alumnosConMasDeUnCurso = Array.from(cursosPorAlumno.values()).filter((s) => s.size > 1).length;
+
+  // Estado a nivel de MATRÍCULA (cada curso que lleva un alumno tiene su
+  // propio estado: puede tener "aprobado" en uno y "en curso" en otro).
+  // Contar aquí sobre todas las matrículas, sin deduplicar por alumno, es lo
+  // correcto — y es exactamente lo que se lista fila por fila en la Hoja 2,
+  // así que ambas hojas son consistentes por construcción.
   const estadosCount = { aprobado: 0, reprobado: 0, 'en curso': 0, retirado: 0 };
   for (const aa of aulaAlumnos) {
     if (Object.prototype.hasOwnProperty.call(estadosCount, aa.estado)) {
       estadosCount[aa.estado]++;
     }
   }
-  const totalAlumnos = Object.values(estadosCount).reduce((a, b) => a + b, 0);
 
   const asistencias = await Asistencia.find({ id_aula: { $in: aulaIds } }).lean();
   const presentes = asistencias.filter(a => a.estado === 'presente').length;
@@ -53,7 +77,7 @@ async function generarReporteResumenCiclo(idCiclo) {
       labels: ['Aprobados', 'Reprobados', 'En Curso', 'Retirados'],
       datasets: [
         {
-          label: 'Alumnos',
+          label: 'Matrículas',
           data: [
             estadosCount.aprobado,
             estadosCount.reprobado,
@@ -71,7 +95,7 @@ async function generarReporteResumenCiclo(idCiclo) {
         legend: { display: false },
         title: {
           display: true,
-          text: 'Estado de Alumnos Matriculados',
+          text: 'Estado de Matrículas (alumno × curso)',
           font: { size: 14, weight: 'bold' },
         },
       },
@@ -86,7 +110,7 @@ async function generarReporteResumenCiclo(idCiclo) {
 
   // ===== HOJA 1: RESUMEN GENERAL =====
   const ws1 = workbook.addWorksheet('Resumen General');
-  ws1.columns = [{ width: 28 }, { width: 18 }, { width: 18 }, { width: 18 }];
+  ws1.columns = [{ width: 30 }, { width: 18 }, { width: 18 }, { width: 18 }];
 
   // Título principal
   ws1.mergeCells('A1:D1');
@@ -99,9 +123,22 @@ async function generarReporteResumenCiclo(idCiclo) {
 
   ws1.addRow([]);
 
+  // Nota aclaratoria: por qué "matrículas" puede ser mayor que "alumnos únicos"
+  const notaRow = ws1.addRow([
+    'Nota: un mismo alumno puede llevar más de un curso en el ciclo. "Alumnos Únicos" cuenta personas; "Matrículas" cuenta inscripciones (alumno × curso).',
+  ]);
+  ws1.mergeCells(`A${notaRow.number}:D${notaRow.number}`);
+  notaRow.height = 28;
+  notaRow.getCell(1).font = { italic: true, size: 9, color: { argb: 'FF616161' } };
+  notaRow.getCell(1).alignment = { wrapText: true, vertical: 'middle' };
+
+  ws1.addRow([]);
+
   // KPIs
   const kpis = [
-    { label: 'Total Alumnos Matriculados', value: totalAlumnos, color: 'FFBBDEFB' },
+    { label: 'Alumnos Únicos', value: totalAlumnosUnicos, color: 'FFBBDEFB' },
+    { label: 'Total Matrículas (alumno × curso)', value: totalMatriculas, color: 'FFD1C4E9' },
+    { label: 'Alumnos con más de un curso', value: alumnosConMasDeUnCurso, color: 'FFB2DFDB' },
     { label: 'Profesores Asignados', value: profesoresUnicos.size, color: 'FFC8E6C9' },
     { label: 'Aulas Creadas', value: aulas.length, color: 'FFFFE0B2' },
     { label: 'Nivel de Asistencia General', value: `${porcentajeAsistencia}%`, color: 'FFE1BEE7' },
@@ -123,13 +160,17 @@ async function generarReporteResumenCiclo(idCiclo) {
 
   ws1.addRow([]);
 
-  // Tabla de estados
+  // Tabla de estados por matrícula
   const estadoRows = [
     { label: 'Aprobados', key: 'aprobado', color: 'FFE8F5E9' },
     { label: 'Reprobados', key: 'reprobado', color: 'FFFFEBEE' },
     { label: 'En Curso', key: 'en curso', color: 'FFE3F2FD' },
     { label: 'Retirados', key: 'retirado', color: 'FFFFF3E0' },
   ];
+
+  const tblTitleRow = ws1.addRow(['Estado de Matrículas (cada curso que lleva un alumno cuenta por separado)']);
+  ws1.mergeCells(`A${tblTitleRow.number}:D${tblTitleRow.number}`);
+  tblTitleRow.getCell(1).font = { italic: true, size: 9, color: { argb: 'FF616161' } };
 
   const tblHeader = ws1.addRow(['Estado', 'Cantidad', 'Porcentaje']);
   tblHeader.eachCell(cell => {
@@ -145,7 +186,7 @@ async function generarReporteResumenCiclo(idCiclo) {
 
   for (const e of estadoRows) {
     const pct =
-      totalAlumnos > 0 ? ((estadosCount[e.key] / totalAlumnos) * 100).toFixed(1) : '0.0';
+      totalMatriculas > 0 ? ((estadosCount[e.key] / totalMatriculas) * 100).toFixed(1) : '0.0';
     const row = ws1.addRow([e.label, estadosCount[e.key], `${pct}%`]);
     row.height = 20;
     row.eachCell(cell => {
@@ -167,7 +208,10 @@ async function generarReporteResumenCiclo(idCiclo) {
     ext: { width: 520, height: 320 },
   });
 
-  // ===== HOJA 2: REPORTE DE ALUMNOS =====
+  // ===== HOJA 2: REPORTE DE MATRÍCULAS =====
+  // Una fila por matrícula (alumno × curso), no por alumno: así el estado y
+  // la nota mostrados son siempre los reales de ESE curso, sin tener que
+  // adivinar cuál mostrar cuando un alumno lleva más de uno.
   const ws2 = workbook.addWorksheet('Reporte de Alumnos');
   ws2.columns = [
     { header: 'N°', key: 'num', width: 6 },
@@ -177,6 +221,8 @@ async function generarReporteResumenCiclo(idCiclo) {
     { header: 'Género', key: 'genero', width: 12 },
     { header: 'Iglesia', key: 'iglesia', width: 28 },
     { header: 'Ministerio', key: 'ministerio', width: 28 },
+    { header: 'Curso', key: 'curso', width: 30 },
+    { header: 'N° Cursos en el Ciclo', key: 'numCursos', width: 18 },
     { header: 'Estado', key: 'estado', width: 18 },
     { header: 'Nota Ponderada', key: 'nota', width: 16 },
   ];
@@ -194,17 +240,6 @@ async function generarReporteResumenCiclo(idCiclo) {
     };
   });
 
-  // Deduplicar alumnos (un alumno puede estar en múltiples aulas del ciclo)
-  const alumnosVistos = new Set();
-  const alumnosUnicos = [];
-  for (const aa of aulaAlumnos) {
-    const id = aa.id_alumno?._id?.toString();
-    if (id && !alumnosVistos.has(id)) {
-      alumnosVistos.add(id);
-      alumnosUnicos.push(aa);
-    }
-  }
-
   const estadoColorMap = {
     aprobado: 'FFE8F5E9',
     reprobado: 'FFFFEBEE',
@@ -215,11 +250,25 @@ async function generarReporteResumenCiclo(idCiclo) {
     'solicitud de retiro': 'FFFFF8E1',
   };
 
+  // Ordenar por alumno (apellido paterno, materno, nombres) y luego por curso,
+  // para que las matrículas de un mismo alumno con varios cursos queden juntas.
+  const matriculasOrdenadas = [...aulaAlumnos].sort((a, b) => {
+    const pa = (a.id_alumno?.apellido_paterno || '').localeCompare(b.id_alumno?.apellido_paterno || '', 'es');
+    if (pa !== 0) return pa;
+    const ma = (a.id_alumno?.apellido_materno || '').localeCompare(b.id_alumno?.apellido_materno || '', 'es');
+    if (ma !== 0) return ma;
+    const na = (a.id_alumno?.nombres || '').localeCompare(b.id_alumno?.nombres || '', 'es');
+    if (na !== 0) return na;
+    return (cursoPorAula.get(String(a.id_aula)) || '').localeCompare(cursoPorAula.get(String(b.id_aula)) || '', 'es');
+  });
+
   let num = 1;
-  for (const aa of alumnosUnicos) {
+  for (const aa of matriculasOrdenadas) {
     const p = aa.id_alumno;
     const min = p?.id_ministerio;
     const igl = min?.id_iglesia;
+    const idAlumno = p?._id?.toString();
+    const numCursos = idAlumno ? cursosPorAlumno.get(idAlumno)?.size || 1 : 1;
 
     const row = ws2.addRow({
       num: num++,
@@ -229,6 +278,8 @@ async function generarReporteResumenCiclo(idCiclo) {
       genero: p?.genero === 'M' ? 'Masculino' : 'Femenino',
       iglesia: igl?.nombre_iglesia || 'Sin iglesia',
       ministerio: min?.nombre_ministerio || 'Sin ministerio',
+      curso: cursoPorAula.get(String(aa.id_aula)) || 'Sin curso',
+      numCursos,
       estado: aa.estado || '',
       nota: aa.nota_ponderada ?? '',
     });
@@ -245,12 +296,16 @@ async function generarReporteResumenCiclo(idCiclo) {
     row.getCell('ap').alignment = { horizontal: 'left', vertical: 'middle' };
     row.getCell('am').alignment = { horizontal: 'left', vertical: 'middle' };
     row.getCell('nombres').alignment = { horizontal: 'left', vertical: 'middle' };
+    row.getCell('curso').alignment = { horizontal: 'left', vertical: 'middle' };
+    if (numCursos > 1) {
+      row.getCell('numCursos').font = { bold: true, color: { argb: 'FFD32F2F' } };
+    }
   }
 
   // Filtros nativos de Excel en todas las columnas
   ws2.autoFilter = {
     from: { row: 1, column: 1 },
-    to: { row: 1, column: 9 },
+    to: { row: 1, column: 11 },
   };
 
   // Congelar la fila de encabezado
