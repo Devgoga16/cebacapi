@@ -3,6 +3,7 @@ const AulaAlumno = require('../models/aulaalumno');
 const Aula = require('../models/aula');
 const Curso = require('../models/curso');
 const Nivel = require('../models/nivel');
+const ExcelJS = require('exceljs');
 
 const RANGOS_EDAD = [
   { key: '12-17', min: 12, max: 17 },
@@ -59,12 +60,11 @@ function obtenerValores(dimension, persona, matriculas, nivelesMap) {
 }
 
 /**
- * Resuelve filtros + agrupación sobre Persona, cruzando con AulaAlumno/Aula/Curso
- * solo cuando la consulta lo requiere (curso, nivel, ciclo, estado de matrícula).
- * Todo el cálculo de breakdown se hace en memoria sobre el conjunto ya filtrado,
- * ya que el volumen de personas es bajo (cientos/miles, no millones).
+ * Resuelve filtros sobre Persona, cruzando con AulaAlumno/Aula/Curso solo cuando
+ * la consulta lo requiere (curso, nivel, ciclo, estado de matrícula). Reutilizada
+ * tanto por la consulta para gráficos como por la exportación a Excel.
  */
-exports.query = async ({ filtros = {}, agruparPor = null, cruzarCon = null, incluirDetalle = false }) => {
+async function obtenerPersonasFiltradas(filtros = {}, { agruparPor = null, cruzarCon = null } = {}) {
   const {
     iglesias = [],
     ministerios = [],
@@ -77,17 +77,6 @@ exports.query = async ({ filtros = {}, agruparPor = null, cruzarCon = null, incl
     estadosCivil = [],
   } = filtros;
 
-  if (agruparPor && !DIMENSIONES_VALIDAS.includes(agruparPor)) {
-    const err = new Error(`Dimensión "agruparPor" inválida: ${agruparPor}`);
-    err.statusCode = 400;
-    throw err;
-  }
-  if (cruzarCon && !DIMENSIONES_VALIDAS.includes(cruzarCon)) {
-    const err = new Error(`Dimensión "cruzarCon" inválida: ${cruzarCon}`);
-    err.statusCode = 400;
-    throw err;
-  }
-
   // 1. Filtro Mongo sobre campos directos de Persona.
   const personaMatch = {};
   if (genero) personaMatch.genero = genero;
@@ -95,7 +84,7 @@ exports.query = async ({ filtros = {}, agruparPor = null, cruzarCon = null, incl
   if (ministerios.length) personaMatch.id_ministerio = { $in: ministerios };
 
   let personas = await Persona.find(personaMatch)
-    .select('nombres apellido_paterno apellido_materno genero estado_civil fecha_nacimiento id_ministerio')
+    .select('nombres apellido_paterno apellido_materno genero estado_civil fecha_nacimiento id_ministerio telefono email numero_documento')
     .populate({
       path: 'id_ministerio',
       select: 'nombre_ministerio id_iglesia',
@@ -167,6 +156,36 @@ exports.query = async ({ filtros = {}, agruparPor = null, cruzarCon = null, incl
     personas = personas.filter((p) => matriculaInfoPorPersona.has(String(p._id)));
   }
 
+  // Orden alfabético consistente: apellido paterno, apellido materno, nombres.
+  personas.sort((a, b) =>
+    `${a.apellido_paterno || ''} ${a.apellido_materno || ''} ${a.nombres || ''}`.localeCompare(
+      `${b.apellido_paterno || ''} ${b.apellido_materno || ''} ${b.nombres || ''}`,
+      'es',
+      { sensitivity: 'base' },
+    ),
+  );
+
+  return { personas, matriculaInfoPorPersona, nivelesMap };
+}
+
+/**
+ * Resuelve filtros + agrupación sobre Persona para los gráficos de analítica.
+ * Todo el cálculo de breakdown se hace en memoria sobre el conjunto ya filtrado,
+ * ya que el volumen de personas es bajo (cientos/miles, no millones).
+ */
+exports.query = async ({ filtros = {}, agruparPor = null, cruzarCon = null, incluirDetalle = false }) => {
+  if (agruparPor && !DIMENSIONES_VALIDAS.includes(agruparPor)) {
+    const err = new Error(`Dimensión "agruparPor" inválida: ${agruparPor}`);
+    err.statusCode = 400;
+    throw err;
+  }
+  if (cruzarCon && !DIMENSIONES_VALIDAS.includes(cruzarCon)) {
+    const err = new Error(`Dimensión "cruzarCon" inválida: ${cruzarCon}`);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const { personas, matriculaInfoPorPersona, nivelesMap } = await obtenerPersonasFiltradas(filtros, { agruparPor, cruzarCon });
   const total = personas.length;
 
   // 5. Breakdown según agruparPor (+ cruzarCon opcional).
@@ -215,4 +234,54 @@ exports.query = async ({ filtros = {}, agruparPor = null, cruzarCon = null, incl
   }
 
   return { total, breakdown, detalle, truncado: incluirDetalle ? personas.length > 500 : false };
+};
+
+/**
+ * Genera un Excel con el listado completo de personas que cumplen los filtros
+ * (sin el tope de 500 que aplica la consulta para gráficos), para que el admin
+ * pueda descargar y contactar/trabajar con esa lista fuera del sistema.
+ */
+exports.exportarExcel = async (filtros = {}) => {
+  const { personas, matriculaInfoPorPersona } = await obtenerPersonasFiltradas(filtros, {});
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'CEBAC Sistema';
+  const ws = workbook.addWorksheet('Personas filtradas');
+
+  const headers = [
+    'Apellido Paterno', 'Apellido Materno', 'Nombres', 'Documento', 'Teléfono', 'Email',
+    'Género', 'Edad', 'Estado Civil', 'Iglesia', 'Ministerio', 'Cursos', 'Estado(s) de matrícula',
+  ];
+  ws.addRow(headers);
+  const headerRow = ws.getRow(1);
+  headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  headerRow.eachCell((cell) => {
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A3A6E' } };
+  });
+
+  for (const p of personas) {
+    const matriculas = matriculaInfoPorPersona.get(String(p._id)) || [];
+    ws.addRow([
+      p.apellido_paterno || '',
+      p.apellido_materno || '',
+      p.nombres || '',
+      p.numero_documento || '',
+      p.telefono || '',
+      p.email || '',
+      p.genero === 'F' ? 'Mujer' : 'Hombre',
+      calcularEdad(p.fecha_nacimiento) ?? '',
+      p.estado_civil || '',
+      p.id_ministerio?.id_iglesia?.nombre_iglesia || '',
+      p.id_ministerio?.nombre_ministerio || '',
+      [...new Set(matriculas.map((m) => m.curso))].join(', '),
+      [...new Set(matriculas.map((m) => m.estado))].join(', '),
+    ]);
+  }
+
+  ws.columns.forEach((col, i) => {
+    col.width = [16, 16, 18, 14, 13, 24, 9, 7, 12, 24, 22, 28, 20][i] || 16;
+  });
+  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: headers.length } };
+
+  return { workbook, total: personas.length };
 };

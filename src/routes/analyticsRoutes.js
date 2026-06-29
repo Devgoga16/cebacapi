@@ -44,6 +44,26 @@ router.post('/personas', personasAnalyticsController.query);
 
 /**
  * @swagger
+ * /api/analytics/personas/export:
+ *   post:
+ *     summary: Descarga un Excel con el listado completo de personas que cumplen los filtros
+ *     tags: [Analytics]
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               filtros:
+ *                 type: object
+ *     responses:
+ *       200:
+ *         description: Archivo .xlsx
+ */
+router.post('/personas/export', personasAnalyticsController.exportar);
+
+/**
+ * @swagger
  * components:
  *   schemas:
  *     BookAnalytics:
