@@ -81,6 +81,13 @@ const PersonaSchema = new mongoose.Schema(
       required: false,
       trim: true,
     },
+    // Bandera de la actualización masiva de datos (género, estado civil,
+    // ministerio): se pide una sola vez a cada usuario al iniciar sesión,
+    // independientemente de si esos campos ya tenían algún valor cargado.
+    datos_actualizados: {
+      type: Boolean,
+      default: false,
+    },
     imagen: {
       data: {
         type: String, // base64
