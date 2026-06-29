@@ -1,5 +1,5 @@
 const Persona = require('../models/persona');
-const { sendMultipleEmail } = require('../utils/emailNotifier');
+const { sendMultipleEmailAsync } = require('../utils/emailNotifier');
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -66,8 +66,15 @@ function validarCampos({ titulo, texto }) {
   }
 }
 
+// El servicio de notificaciones rechaza el LOTE COMPLETO si encuentra un solo
+// email con formato inválido entre los destinatarios, así que hay que filtrar
+// antes de enviar (de lo contrario no le llega nada a nadie).
+const LOTE_MAXIMO = 200;
+
 /**
- * Envía el correo masivo a todas las personas que tengan un email registrado.
+ * Envía el correo masivo a todas las personas que tengan un email válido
+ * registrado. Se envía en lotes para evitar que el servicio de notificaciones
+ * rechace una sola llamada con demasiados destinatarios.
  */
 exports.enviarATodos = async ({ titulo, texto }) => {
   validarCampos({ titulo, texto });
@@ -76,16 +83,60 @@ exports.enviarATodos = async ({ titulo, texto }) => {
     .select('email')
     .lean();
 
-  const destinatarios = [...new Set(personas.map((p) => p.email).filter(Boolean))];
+  const todos = [...new Set(personas.map((p) => (p.email || '').trim()).filter(Boolean))];
+  const destinatarios = todos.filter((email) => EMAIL_REGEX.test(email));
+  const descartados = todos.length - destinatarios.length;
 
   if (destinatarios.length === 0) {
-    return { totalDestinatarios: 0 };
+    return { totalDestinatarios: 0, descartados };
   }
 
   const html = construirHtmlCorreoMasivo({ titulo, texto });
-  sendMultipleEmail(destinatarios, titulo, html);
 
-  return { totalDestinatarios: destinatarios.length };
+  for (let i = 0; i < destinatarios.length; i += LOTE_MAXIMO) {
+    const lote = destinatarios.slice(i, i + LOTE_MAXIMO);
+    await sendMultipleEmailAsync(lote, titulo, html);
+  }
+
+  return { totalDestinatarios: destinatarios.length, descartados };
+};
+
+/**
+ * Igual que enviarATodos, pero envía un correo a la vez (no por lotes) e
+ * invoca onProgress después de cada envío para que el llamador pueda
+ * reportar el avance en tiempo real (ej. un stream HTTP hacia el frontend).
+ * Un fallo puntual en un destinatario no detiene el resto del proceso.
+ */
+exports.enviarATodosConProgreso = async ({ titulo, texto }, onProgress) => {
+  validarCampos({ titulo, texto });
+
+  const personas = await Persona.find({ email: { $exists: true, $nin: ['', null] } })
+    .select('email')
+    .lean();
+
+  const todos = [...new Set(personas.map((p) => (p.email || '').trim()).filter(Boolean))];
+  const destinatarios = todos.filter((email) => EMAIL_REGEX.test(email));
+  const descartados = todos.length - destinatarios.length;
+  const total = destinatarios.length;
+
+  const html = construirHtmlCorreoMasivo({ titulo, texto });
+
+  let enviados = 0;
+  let fallidos = 0;
+
+  for (const email of destinatarios) {
+    try {
+      await sendMultipleEmailAsync([email], titulo, html);
+      enviados += 1;
+    } catch (err) {
+      fallidos += 1;
+    }
+    if (typeof onProgress === 'function') {
+      onProgress({ total, enviados, fallidos, descartados, email });
+    }
+  }
+
+  return { total, enviados, fallidos, descartados };
 };
 
 /**
@@ -101,7 +152,7 @@ exports.enviarAUno = async ({ titulo, texto, email }) => {
   }
 
   const html = construirHtmlCorreoMasivo({ titulo, texto });
-  sendMultipleEmail([email.trim()], titulo, html);
+  await sendMultipleEmailAsync([email.trim()], titulo, html);
 
   return { totalDestinatarios: 1 };
 };
