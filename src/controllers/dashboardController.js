@@ -30,3 +30,12 @@ exports.getAdminDashboard = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getAdminCicloResumen = async (req, res, next) => {
+  try {
+    const data = await dashboardService.getAdminCicloResumen();
+    sendResponse(res, { data });
+  } catch (err) {
+    next(err);
+  }
+};

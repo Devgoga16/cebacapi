@@ -119,6 +119,18 @@ router.get('/dashboard/docente/:id_persona', dashboardController.getDocenteDashb
  *                 action_code:
  *                   type: integer
  */
+/**
+ * @swagger
+ * /dashboard/admin/ciclo-resumen:
+ *   get:
+ *     summary: Resumen de gestión del ciclo actual (matrículas, asistencia, aprobación, alertas)
+ *     tags: [Dashboard]
+ *     responses:
+ *       200:
+ *         description: Resumen accionable del ciclo actual para el panel de Administración
+ */
+router.get('/dashboard/admin/ciclo-resumen', dashboardController.getAdminCicloResumen);
+
 router.get('/dashboard/admin/:id_persona', dashboardController.getAdminDashboard);
 
 module.exports = router;
