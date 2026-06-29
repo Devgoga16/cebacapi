@@ -1,6 +1,46 @@
 const express = require('express');
 const router = express.Router();
 const analyticsController = require('../controllers/analyticsController');
+const personasAnalyticsController = require('../controllers/personasAnalyticsController');
+
+/**
+ * @swagger
+ * /api/analytics/personas:
+ *   post:
+ *     summary: Consulta filtrable de personas con agrupación/cruce para gráficos (analítica admin)
+ *     tags: [Analytics]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               filtros:
+ *                 type: object
+ *                 properties:
+ *                   iglesias: { type: array, items: { type: string } }
+ *                   ministerios: { type: array, items: { type: string } }
+ *                   niveles: { type: array, items: { type: string } }
+ *                   cursos: { type: array, items: { type: string } }
+ *                   idCiclo: { type: string }
+ *                   estadosMatricula: { type: array, items: { type: string } }
+ *                   genero: { type: string, enum: [M, F] }
+ *                   rangoEdad: { type: string }
+ *                   estadosCivil: { type: array, items: { type: string } }
+ *               agruparPor:
+ *                 type: string
+ *                 enum: [iglesia, ministerio, nivel, curso, genero, estadoCivil, estadoMatricula, rangoEdad, ciclo]
+ *               cruzarCon:
+ *                 type: string
+ *                 enum: [iglesia, ministerio, nivel, curso, genero, estadoCivil, estadoMatricula, rangoEdad, ciclo]
+ *               incluirDetalle:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: total, breakdown (y detalle si se solicitó)
+ */
+router.post('/personas', personasAnalyticsController.query);
 
 /**
  * @swagger
