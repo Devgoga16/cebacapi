@@ -1,5 +1,6 @@
 const personasAnalyticsService = require('../services/personasAnalyticsService');
 const { sendResponse } = require('../utils/helpers');
+const audit = require('../services/auditService');
 
 /**
  * POST /analytics/personas
@@ -24,6 +25,17 @@ exports.exportar = async (req, res, next) => {
   try {
     const { filtros } = req.body || {};
     const { workbook, total } = await personasAnalyticsService.exportarExcel(filtros || {});
+
+    audit.registrar({
+      accion: 'PERSONAS_EXPORTADAS_EXCEL',
+      entidad: 'Persona',
+      actor: req.actor,
+      descripcion: `Exportación a Excel de ${total} persona(s) con datos personales (teléfono, documento, dirección)`,
+      payload: { filtros: filtros || {}, total },
+      request_body: req.body,
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
 
     const fecha = new Date().toISOString().slice(0, 10);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
