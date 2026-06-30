@@ -15,10 +15,20 @@ const mongoose = require('mongoose');
 // Teléfono peruano: exactamente 9 dígitos, empieza con 9, sin espacios ni otros caracteres
 const TELEFONO_VALIDO_REGEX = /^9\d{8}$/;
 
+// Perú no usa horario de verano: siempre UTC-5. El servidor puede correr en
+// UTC (común en hosting cloud), donde `new Date()` ya cae en el día siguiente
+// varias horas antes de que cambie el día en Lima — por eso no se puede usar
+// los componentes locales del servidor (getFullYear/getMonth/getDate) para
+// saber "qué día es hoy en Perú". Se resta el offset y se trabaja todo en UTC.
+function obtenerHoyLimaUTC() {
+  const limaMs = Date.now() - 5 * 60 * 60 * 1000;
+  const lima = new Date(limaMs);
+  return new Date(Date.UTC(lima.getUTCFullYear(), lima.getUTCMonth(), lima.getUTCDate()));
+}
+
 function normalizeToLocalDayUTC(dateInput) {
   if (!dateInput) {
-    const now = new Date();
-    return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+    return obtenerHoyLimaUTC();
   }
   // Si dateInput es string en formato YYYY-MM-DD, parsearlo directamente en UTC
   if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateInput)) {
@@ -228,8 +238,7 @@ exports.getAulasByCursoAndCiclo = async (id_curso, id_ciclo) => {
 
 function normalizarFechaUTC(dateInput) {
   if (!dateInput) {
-    const now = new Date();
-    return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+    return obtenerHoyLimaUTC();
   }
   if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateInput)) {
     const [year, month, day] = dateInput.split('T')[0].split('-').map(Number);

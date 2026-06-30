@@ -1,5 +1,6 @@
 const errorHandler = require('./middlewares/errorHandler');
 const extractActor = require('./middlewares/extractActor');
+const requireAuth = require('./middlewares/requireAuth');
 require('./config/db');
 require('./config/dbLogs');
 const express = require('express');
@@ -72,6 +73,13 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/api/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// ── Autenticación obligatoria a partir de aquí ────────────────────────
+// extractActor (arriba) solo identifica al actor para auditoría y nunca
+// bloquea. requireAuth sí corta con 401 si no hay un JWT válido. Las rutas
+// que deben quedar públicas (login, activación de cuenta, health, docs)
+// están en la whitelist interna del middleware.
+app.use(requireAuth);
 
 // Rutas en raíz (compatibilidad)
 app.use('/', rolesRoutes);
