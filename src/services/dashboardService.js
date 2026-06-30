@@ -10,6 +10,17 @@ const Inscripcion = require("../models/inscripcion");
 
 const DIAS_SEMANA_POR_INDICE_UTC = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
+// Perú no usa horario de verano: siempre UTC-5. El servidor puede correr en
+// UTC (común en hosting cloud), donde `new Date()` ya cae en el día siguiente
+// varias horas antes de que cambie el día en Lima — por eso no se puede usar
+// now.getFullYear()/getMonth()/getDate() (componentes locales del servidor)
+// para saber "qué día es hoy en Perú". Se resta el offset y se trabaja todo en UTC.
+function obtenerHoyLimaUTC() {
+  const limaMs = Date.now() - 5 * 60 * 60 * 1000;
+  const lima = new Date(limaMs);
+  return new Date(Date.UTC(lima.getUTCFullYear(), lima.getUTCMonth(), lima.getUTCDate()));
+}
+
 exports.getAlumnoDashboard = async (id_persona) => {
   // 1. Ciclo actual
   const cicloActual = await Ciclo.findOne({ actual: true });
@@ -37,10 +48,7 @@ exports.getAlumnoDashboard = async (id_persona) => {
   // Usar inicio del día en UTC para evitar problemas de zona horaria cuando
   // fecha_caducidad se guarda como fecha (00:00:00Z). Esto garantiza que
   // un anuncio con caducidad "hoy" sea visible hasta las 23:59:59 hora local.
-  const now = new Date();
-  // Construye medianoche UTC de la FECHA LOCAL actual
-  // (usa getFullYear()/getMonth()/getDate() en lugar de getUTC* para no saltar de día)
-  const hoyUTC = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const hoyUTC = obtenerHoyLimaUTC();
 
 
   let rol = await Rol.findOne({ nombre_rol: "estudiante" });
@@ -82,8 +90,7 @@ exports.getDocenteDashboard = async (id_persona) => {
   }
 
   // 3. Anuncios para el rol docente y fecha_caducidad >= hoy
-  const now = new Date();
-  const hoyUTC = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const hoyUTC = obtenerHoyLimaUTC();
 
   let rol = await Rol.findOne({ nombre_rol: "docente" });
   let anuncios = await Anuncio.find({
@@ -130,8 +137,7 @@ exports.getAdminDashboard = async (id_persona) => {
   const totalAulas = await Aula.countDocuments();
 
   // 3. Anuncios para el rol docente y fecha_caducidad >= hoy
-  const now = new Date();
-  const hoyUTC = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const hoyUTC = obtenerHoyLimaUTC();
 
   let rol = await Rol.findOne({ nombre_rol: "admin" });
   let anuncios = await Anuncio.find({
@@ -263,8 +269,7 @@ exports.getAdminCicloResumen = async () => {
     : null;
 
   // ── Aulas que debían tomar asistencia hoy y no lo hicieron ──────────
-  const now = new Date();
-  const hoyUTC = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const hoyUTC = obtenerHoyLimaUTC();
   const nombreDiaHoy = DIAS_SEMANA_POR_INDICE_UTC[hoyUTC.getUTCDay()];
 
   const aulasHoy = aulas.filter((a) => a.dia === nombreDiaHoy && a.estado !== 'terminada');
