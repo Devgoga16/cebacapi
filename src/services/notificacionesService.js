@@ -14,7 +14,7 @@ exports.notificarReaccion = async ({ publicacion_id, actor_id, actor_rol, reacci
     if (!pub) return;
     if (String(pub.autor_id) === String(actor_id)) return; // no auto-notificar
 
-    const emojis = { me_gusta: '👍', me_encanta: '😍', me_asombra: '😲', me_bendice: '🙏' };
+    const emojis = { me_gusta: '👍', me_encanta: '❤️', me_asombra: '😲', me_bendice: '🙏' };
     await Notificacion.create({
       destinatario_id: pub.autor_id,
       tipo: 'reaccion',
