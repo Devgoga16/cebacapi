@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const TIPOS_REACCION = ['me_gusta', 'me_encanta', 'me_asombra', 'me_bendice'];
-const TIPOS_ENTIDAD = ['AnuncioProfesor', 'Anuncio'];
+const TIPOS_ENTIDAD = ['Publicacion'];
 
 const ReaccionSchema = new mongoose.Schema(
   {
@@ -10,7 +10,7 @@ const ReaccionSchema = new mongoose.Schema(
       enum: TIPOS_ENTIDAD,
       required: true,
     },
-    id_anuncio: {
+    id_publicacion: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
       index: true,
@@ -32,8 +32,7 @@ const ReaccionSchema = new mongoose.Schema(
   }
 );
 
-// Un usuario solo puede tener UNA reacción activa por anuncio
-ReaccionSchema.index({ tipo_entidad: 1, id_anuncio: 1, id_usuario: 1 }, { unique: true });
+ReaccionSchema.index({ tipo_entidad: 1, id_publicacion: 1, id_usuario: 1 }, { unique: true });
 
 module.exports = mongoose.model('Reaccion', ReaccionSchema);
 module.exports.TIPOS_REACCION = TIPOS_REACCION;

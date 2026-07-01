@@ -2,7 +2,6 @@ const Ciclo = require("../models/ciclo");
 const AulaAlumno = require("../models/aulaalumno");
 const Aula = require("../models/aula");
 const Curso = require("../models/curso");
-const Anuncio = require("../models/anuncio");
 const Persona = require("../models/persona");
 const Rol = require("../models/rol");
 const Asistencia = require("../models/asistencia");
@@ -43,25 +42,9 @@ exports.getAlumnoDashboard = async (id_persona) => {
     cursosCursando = aulaAlumnos;
   }
 
-  // 3. Anuncios para el rol alumno y fecha_caducidad >= hoy
-
-  // Usar inicio del día en UTC para evitar problemas de zona horaria cuando
-  // fecha_caducidad se guarda como fecha (00:00:00Z). Esto garantiza que
-  // un anuncio con caducidad "hoy" sea visible hasta las 23:59:59 hora local.
-  const hoyUTC = obtenerHoyLimaUTC();
-
-
-  let rol = await Rol.findOne({ nombre_rol: "estudiante" });
-
-  let anuncios = await Anuncio.find({
-    roles: { $in: [rol._id] },
-    fecha_caducidad: { $gte: hoyUTC },
-  }).populate('id_categoria_anuncio roles id_publicador');
-
   return {
     cicloActual,
     cursosCursando,
-    anuncios,
   };
 };
 
@@ -89,20 +72,10 @@ exports.getDocenteDashboard = async (id_persona) => {
     }));
   }
 
-  // 3. Anuncios para el rol docente y fecha_caducidad >= hoy
-  const hoyUTC = obtenerHoyLimaUTC();
-
-  let rol = await Rol.findOne({ nombre_rol: "docente" });
-  let anuncios = await Anuncio.find({
-    roles: { $in: [rol._id] },
-    fecha_caducidad: { $gte: hoyUTC },
-  }).populate('id_categoria_anuncio roles id_publicador');
-
   return {
     cicloActual,
     aulas,
     total_alumnos,
-    anuncios,
   };
 };
 
@@ -136,22 +109,12 @@ exports.getAdminDashboard = async (id_persona) => {
   // 5. Conteo de aulas
   const totalAulas = await Aula.countDocuments();
 
-  // 3. Anuncios para el rol docente y fecha_caducidad >= hoy
-  const hoyUTC = obtenerHoyLimaUTC();
-
-  let rol = await Rol.findOne({ nombre_rol: "admin" });
-  let anuncios = await Anuncio.find({
-    roles: { $in: [rol._id] },
-    fecha_caducidad: { $gte: hoyUTC },
-  }).populate('id_categoria_anuncio roles id_publicador');
-
   return {
     cicloActual,
     totalUsuarios,
     totalAlumnos,
     totalProfesores,
     totalAulas,
-    anuncios
   };
 };
 

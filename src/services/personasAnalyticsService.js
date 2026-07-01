@@ -75,6 +75,8 @@ async function obtenerPersonasFiltradas(filtros = {}, { agruparPor = null, cruza
     genero = null,
     rangoEdad = null,
     estadosCivil = [],
+    dias = [],
+    incluirDocentes = false,
   } = filtros;
 
   // 1. Filtro Mongo sobre campos directos de Persona.
@@ -109,6 +111,8 @@ async function obtenerPersonasFiltradas(filtros = {}, { agruparPor = null, cruza
     cursos.length > 0 ||
     !!idCiclo ||
     estadosMatricula.length > 0 ||
+    dias.length > 0 ||
+    incluirDocentes ||
     DIMENSIONES_DE_MATRICULA.includes(agruparPor) ||
     DIMENSIONES_DE_MATRICULA.includes(cruzarCon);
 
@@ -118,6 +122,7 @@ async function obtenerPersonasFiltradas(filtros = {}, { agruparPor = null, cruza
   if (necesitaMatricula) {
     const aulaFilter = {};
     if (idCiclo) aulaFilter.id_ciclo = idCiclo;
+    if (dias.length) aulaFilter.dia = { $in: dias };
 
     let cursoIds = cursos.length ? cursos.map(String) : null;
     if (niveles.length) {
@@ -128,7 +133,7 @@ async function obtenerPersonasFiltradas(filtros = {}, { agruparPor = null, cruza
     if (cursoIds) aulaFilter.id_curso = { $in: cursoIds };
 
     const aulas = await Aula.find(aulaFilter)
-      .select('_id id_curso id_ciclo')
+      .select('_id id_curso id_ciclo id_profesor')
       .populate('id_curso', 'nombre_curso id_nivel')
       .populate('id_ciclo', 'nombre_ciclo')
       .lean();
@@ -154,6 +159,28 @@ async function obtenerPersonasFiltradas(filtros = {}, { agruparPor = null, cruza
 
     // Solo personas con al menos una matrícula que cumpla los filtros de matrícula.
     personas = personas.filter((p) => matriculaInfoPorPersona.has(String(p._id)));
+
+    // Incluir docentes de las aulas filtradas (opcional).
+    if (incluirDocentes && aulaIds.length) {
+      const profesorIds = [...new Set(aulas.map((a) => String(a.id_profesor)).filter(Boolean))];
+      const existingIds = new Set(personas.map((p) => String(p._id)));
+      const nuevosIds = profesorIds.filter((id) => !existingIds.has(id));
+      if (nuevosIds.length) {
+        const profMatch = { ...personaMatch, _id: { $in: nuevosIds } };
+        let profs = await Persona.find(profMatch)
+          .select('nombres apellido_paterno apellido_materno genero estado_civil fecha_nacimiento id_ministerio telefono email numero_documento')
+          .populate({ path: 'id_ministerio', select: 'nombre_ministerio id_iglesia', populate: { path: 'id_iglesia', select: 'nombre_iglesia' } })
+          .lean();
+        if (iglesias.length) {
+          const igSet = new Set(iglesias.map(String));
+          profs = profs.filter((p) => p.id_ministerio?.id_iglesia && igSet.has(String(p.id_ministerio.id_iglesia._id)));
+        }
+        if (rangoEdad) {
+          profs = profs.filter((p) => rangoDeEdad(calcularEdad(p.fecha_nacimiento)) === rangoEdad);
+        }
+        personas = [...personas, ...profs];
+      }
+    }
   }
 
   // Orden alfabético consistente: apellido paterno, apellido materno, nombres.

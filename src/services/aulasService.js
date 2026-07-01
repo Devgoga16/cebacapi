@@ -3,7 +3,6 @@ const AulaAlumno = require('../models/aulaalumno');
 const Inscripcion = require('../models/inscripcion');
 const Asistencia = require('../models/asistencia');
 const Calificacion = require('../models/calificacion');
-const AnuncioProfesor = require('../models/anuncioProfesor');
 const TipoCalificacion = require('../models/tipoCalificacion');
 const RequerimientoAula = require('../models/requerimientoAula');
 const Curso = require('../models/curso');
@@ -164,7 +163,6 @@ exports.deleteAulaCompleto = async (id) => {
     aulaAlumnos: 0,
     asistencias: 0,
     calificaciones: 0,
-    anunciosProfesor: 0,
     tiposCalificacion: 0,
     requerimientosAula: 0,
     aula: false
@@ -172,12 +170,11 @@ exports.deleteAulaCompleto = async (id) => {
 
   try {
     // Eliminar todas las relaciones de forma paralela
-    const [inscripcionesRes, aulaAlumnosRes, asistenciasRes, calificacionesRes, anunciosRes, tiposCalifRes, requerimientosRes] = await Promise.all([
+    const [inscripcionesRes, aulaAlumnosRes, asistenciasRes, calificacionesRes, tiposCalifRes, requerimientosRes] = await Promise.all([
       Inscripcion.deleteMany({ id_aula: id }),
       AulaAlumno.deleteMany({ id_aula: id }),
       Asistencia.deleteMany({ id_aula: id }),
       Calificacion.deleteMany({ id_aula: id }),
-      AnuncioProfesor.deleteMany({ id_aula: id }),
       TipoCalificacion.deleteMany({ id_aula: id }),
       RequerimientoAula.deleteMany({ id_aula: id })
     ]);
@@ -186,7 +183,6 @@ exports.deleteAulaCompleto = async (id) => {
     deletedInfo.aulaAlumnos = aulaAlumnosRes.deletedCount || 0;
     deletedInfo.asistencias = asistenciasRes.deletedCount || 0;
     deletedInfo.calificaciones = calificacionesRes.deletedCount || 0;
-    deletedInfo.anunciosProfesor = anunciosRes.deletedCount || 0;
     deletedInfo.tiposCalificacion = tiposCalifRes.deletedCount || 0;
     deletedInfo.requerimientosAula = requerimientosRes.deletedCount || 0;
 
