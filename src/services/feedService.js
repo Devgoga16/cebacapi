@@ -218,12 +218,38 @@ exports.getFeed = async (personaId, { page = 1, limit = 15 } = {}) => {
   };
 };
 
-// ── Obtener publicación individual ────────────────────────────────────────────
+// ── Obtener publicación individual (con verificación de acceso) ───────────────
 
-exports.getPublicacion = async (id) => {
-  return await Publicacion.findById(id)
+exports.getPublicacion = async (id, personaId) => {
+  const pub = await Publicacion.findById(id)
     .populate('autor_id', 'nombres apellido_paterno imagen')
     .lean();
+  if (!pub) return { pub: null, tieneAcceso: false };
+
+  // El autor siempre tiene acceso
+  if (String(pub.autor_id?._id ?? pub.autor_id) === String(personaId)) {
+    return { pub, tieneAcceso: true };
+  }
+
+  const tipo = pub.visibilidad?.tipo;
+
+  // Visibilidad relacional: verificar array de destinatarios pre-computados
+  const enDestinatarios = pub.destinatarios?.some(d => String(d) === String(personaId));
+  if (enDestinatarios) return { pub, tieneAcceso: true };
+
+  // Visibilidad global por rol: verificar roles del usuario
+  if (['roles_globales', 'coordinadores_global', 'docentes_global', 'estudiantes_global'].includes(tipo)) {
+    const roles = await getRolesParaPersona(personaId);
+    if (tipo === 'roles_globales') {
+      const destino = pub.visibilidad?.roles_destino || [];
+      if (roles.some(r => destino.includes(r))) return { pub, tieneAcceso: true };
+    }
+    if (tipo === 'coordinadores_global' && roles.includes('Coordinador')) return { pub, tieneAcceso: true };
+    if (tipo === 'docentes_global' && roles.includes('Docente')) return { pub, tieneAcceso: true };
+    if (tipo === 'estudiantes_global' && roles.includes('Estudiante')) return { pub, tieneAcceso: true };
+  }
+
+  return { pub, tieneAcceso: false };
 };
 
 // ── Eliminar publicación ──────────────────────────────────────────────────────

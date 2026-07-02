@@ -4,6 +4,7 @@ const ctrl = require('../controllers/feedController');
 
 // Rutas con segmentos estáticos primero (evitar conflictos con /:id_persona)
 router.get('/mis-aulas/:id_persona', ctrl.getMisAulas);
+router.get('/post/:id', ctrl.getPublicacion);
 router.delete('/comentarios/:comentarioId', ctrl.eliminarComentario);
 
 // Feed

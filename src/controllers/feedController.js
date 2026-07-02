@@ -44,6 +44,17 @@ exports.eliminarPublicacion = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+exports.getPublicacion = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const personaId = req.query.id_persona;
+    if (!personaId) return sendResponse(res, { state: 'failed', data: null, message: 'id_persona requerido', action_code: 400 });
+    const { pub, tieneAcceso } = await feedService.getPublicacion(id, personaId);
+    if (!pub) return sendResponse(res, { state: 'failed', data: null, message: 'Publicación no encontrada', action_code: 404 });
+    sendResponse(res, { data: { pub, tieneAcceso } });
+  } catch (err) { next(err); }
+};
+
 exports.getMisAulas = async (req, res, next) => {
   try {
     const { id_persona } = req.params;
