@@ -7,20 +7,33 @@ const ArchivoSchema = new mongoose.Schema({
   size: { type: Number },
 }, { _id: false });
 
+const OpcionEncuestaSchema = new mongoose.Schema({
+  texto: { type: String, required: true },
+  votos: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Persona' }],
+}, { _id: false });
+
+const EncuestaSchema = new mongoose.Schema({
+  pregunta: { type: String, required: true },
+  opciones: {
+    type: [OpcionEncuestaSchema],
+    validate: [v => v.length >= 2, 'Mínimo 2 opciones'],
+  },
+}, { _id: false });
+
 const ROLES_PUBLICACION = ['Admin', 'Coordinador', 'Docente', 'Estudiante'];
 
-const FORMATOS_PUBLICACION = ['publicacion', 'anuncio'];
+const FORMATOS_PUBLICACION = ['publicacion', 'anuncio', 'encuesta'];
 
 const TIPOS_VISIBILIDAD = [
-  'roles_globales',        // Admin → por rol (roles_destino indica cuáles)
-  'coordinadores_global',  // Coordinador → entre coordinadores
-  'mis_docentes',          // Coordinador → sus docentes a cargo
-  'mis_estudiantes_coord', // Coordinador → estudiantes de sus aulas
-  'docentes_global',       // Docente → entre todos los docentes
-  'mis_estudiantes',       // Docente → todos sus estudiantes
-  'aula_especifica',       // Docente → estudiantes de un aula concreta
-  'estudiantes_global',    // Estudiante → todos los estudiantes
-  'mi_aula',               // Estudiante → compañeros de aula
+  'roles_globales',
+  'coordinadores_global',
+  'mis_docentes',
+  'mis_estudiantes_coord',
+  'docentes_global',
+  'mis_estudiantes',
+  'aula_especifica',
+  'estudiantes_global',
+  'mi_aula',
 ];
 
 const PublicacionSchema = new mongoose.Schema({
@@ -29,15 +42,14 @@ const PublicacionSchema = new mongoose.Schema({
   formato: { type: String, enum: FORMATOS_PUBLICACION, default: 'publicacion' },
   contenido: { type: String, default: '' },
   archivos: [ArchivoSchema],
+  encuesta: { type: EncuestaSchema, default: null },
+  fijada: { type: Boolean, default: false },
   visibilidad: {
     tipo: { type: String, enum: TIPOS_VISIBILIDAD, required: true },
-    roles_destino: [{ type: String }],                                             // para roles_globales
-    aulas_destino: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Aula' }],        // para aula_especifica
-    label: { type: String },                                                        // texto legible
+    roles_destino: [{ type: String }],
+    aulas_destino: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Aula' }],
+    label: { type: String },
   },
-  // Para visibilidad relacional (mis_docentes, mis_estudiantes*, aula_especifica, mi_aula)
-  // se pre-computan los IDs de Persona que pueden ver esta publicación.
-  // Para visibilidad por rol global se evalúa en tiempo de consulta.
   destinatarios: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Persona' }],
 }, {
   collection: 'publicaciones',
@@ -48,6 +60,7 @@ PublicacionSchema.index({ autor_id: 1, createdAt: -1 });
 PublicacionSchema.index({ destinatarios: 1, createdAt: -1 });
 PublicacionSchema.index({ 'visibilidad.tipo': 1, createdAt: -1 });
 PublicacionSchema.index({ 'visibilidad.roles_destino': 1, createdAt: -1 });
+PublicacionSchema.index({ fijada: -1, createdAt: -1 });
 
 module.exports = mongoose.model('Publicacion', PublicacionSchema);
 module.exports.ROLES_PUBLICACION = ROLES_PUBLICACION;

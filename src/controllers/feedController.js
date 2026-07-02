@@ -15,11 +15,11 @@ exports.getFeed = async (req, res, next) => {
 
 exports.crearPublicacion = async (req, res, next) => {
   try {
-    const { autor_id, autor_rol, contenido, archivos, visibilidad, formato } = req.body || {};
+    const { autor_id, autor_rol, contenido, archivos, visibilidad, formato, encuesta } = req.body || {};
     if (!autor_id || !autor_rol || !visibilidad?.tipo) {
       return sendResponse(res, { state: 'failed', data: null, message: 'autor_id, autor_rol y visibilidad.tipo son requeridos', action_code: 400 });
     }
-    const pub = await feedService.crearPublicacion({ autor_id, autor_rol, contenido, archivos, visibilidad, formato });
+    const pub = await feedService.crearPublicacion({ autor_id, autor_rol, contenido, archivos, visibilidad, formato, encuesta });
     sendResponse(res, { data: pub, message: 'Publicación creada' });
   } catch (err) { next(err); }
 };
@@ -52,6 +52,30 @@ exports.getPublicacion = async (req, res, next) => {
     const { pub, tieneAcceso } = await feedService.getPublicacion(id, personaId);
     if (!pub) return sendResponse(res, { state: 'failed', data: null, message: 'Publicación no encontrada', action_code: 404 });
     sendResponse(res, { data: { pub, tieneAcceso } });
+  } catch (err) { next(err); }
+};
+
+exports.votarEncuesta = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { persona_id, opcion_index } = req.body || {};
+    if (!persona_id || opcion_index === undefined) {
+      return sendResponse(res, { state: 'failed', data: null, message: 'persona_id y opcion_index son requeridos', action_code: 400 });
+    }
+    const encuesta = await feedService.votarEncuesta(id, persona_id, opcion_index);
+    sendResponse(res, { data: encuesta, message: 'Voto registrado' });
+  } catch (err) { next(err); }
+};
+
+exports.fijarPublicacion = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { persona_id, fijada } = req.body || {};
+    if (!persona_id || fijada === undefined) {
+      return sendResponse(res, { state: 'failed', data: null, message: 'persona_id y fijada son requeridos', action_code: 400 });
+    }
+    const pub = await feedService.fijarPublicacion(id, persona_id, fijada);
+    sendResponse(res, { data: pub, message: fijada ? 'Publicación fijada' : 'Publicación desfijada' });
   } catch (err) { next(err); }
 };
 

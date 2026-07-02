@@ -107,7 +107,7 @@ function buildVisibilidadLabel(tipo, rolesDestino = [], aulasNombres = []) {
 
 // ── Crear publicación ─────────────────────────────────────────────────────────
 
-exports.crearPublicacion = async ({ autor_id, autor_rol, contenido, archivos = [], visibilidad, formato = 'publicacion' }) => {
+exports.crearPublicacion = async ({ autor_id, autor_rol, contenido, archivos = [], visibilidad, formato = 'publicacion', encuesta = null }) => {
   const { tipo, roles_destino = [], aulas_destino = [] } = visibilidad;
 
   // Pre-computar destinatarios para visibilidad relacional
@@ -121,7 +121,7 @@ exports.crearPublicacion = async ({ autor_id, autor_rol, contenido, archivos = [
   }
   const label = buildVisibilidadLabel(tipo, roles_destino, aulasNombres);
 
-  const pub = await Publicacion.create({
+  const pubData = {
     autor_id,
     autor_rol,
     formato,
@@ -129,7 +129,14 @@ exports.crearPublicacion = async ({ autor_id, autor_rol, contenido, archivos = [
     archivos,
     visibilidad: { tipo, roles_destino, aulas_destino, label },
     destinatarios,
-  });
+  };
+  if (encuesta && encuesta.pregunta && Array.isArray(encuesta.opciones) && encuesta.opciones.length >= 2) {
+    pubData.encuesta = {
+      pregunta: encuesta.pregunta,
+      opciones: encuesta.opciones.map(o => ({ texto: o.texto, votos: [] })),
+    };
+  }
+  const pub = await Publicacion.create(pubData);
 
   // Notificar: relacionales (destinatarios pre-computados) + globales por rol
   notifService.notificarNuevaPublicacion({
@@ -188,7 +195,7 @@ exports.getFeed = async (personaId, { page = 1, limit = 15 } = {}) => {
   const [publicaciones, total] = await Promise.all([
     Publicacion.find(query)
       .populate('autor_id', 'nombres apellido_paterno imagen')
-      .sort({ createdAt: -1 })
+      .sort({ fijada: -1, createdAt: -1 })
       .skip(skip)
       .limit(Number(limit))
       .lean(),
@@ -270,6 +277,50 @@ exports.eliminarPublicacion = async (id, personaId) => {
     notifService.eliminarNotificacionesPublicacion(id),
   ]);
   return true;
+};
+
+// ── Votar en encuesta ─────────────────────────────────────────────────────────
+
+exports.votarEncuesta = async (publicacionId, personaId, opcionIndex) => {
+  const pub = await Publicacion.findById(publicacionId);
+  if (!pub?.encuesta) {
+    const err = new Error('Encuesta no encontrada');
+    err.statusCode = 404;
+    throw err;
+  }
+  const idx = Number(opcionIndex);
+  if (isNaN(idx) || idx < 0 || idx >= pub.encuesta.opciones.length) {
+    const err = new Error('Opción inválida');
+    err.statusCode = 400;
+    throw err;
+  }
+  // Quitar voto previo de todas las opciones
+  pub.encuesta.opciones.forEach(op => {
+    op.votos = op.votos.filter(v => String(v) !== String(personaId));
+  });
+  // Añadir voto a la opción elegida
+  pub.encuesta.opciones[idx].votos.push(personaId);
+  pub.markModified('encuesta');
+  await pub.save();
+  return pub.encuesta;
+};
+
+// ── Fijar publicación ─────────────────────────────────────────────────────────
+
+exports.fijarPublicacion = async (id, personaId, fijada) => {
+  const roles = await getRolesParaPersona(personaId);
+  if (!roles.includes('Admin') && !roles.includes('Coordinador')) {
+    const err = new Error('Sin permisos para fijar publicaciones');
+    err.statusCode = 403;
+    throw err;
+  }
+  const pub = await Publicacion.findByIdAndUpdate(id, { fijada }, { new: true }).lean();
+  if (!pub) {
+    const err = new Error('Publicación no encontrada');
+    err.statusCode = 404;
+    throw err;
+  }
+  return pub;
 };
 
 // ── Comentarios ───────────────────────────────────────────────────────────────

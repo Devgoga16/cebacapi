@@ -19,6 +19,12 @@ router.post('/:id/comentarios', ctrl.agregarComentario);
 // Anuncios
 router.post('/:id/visto', ctrl.marcarAnuncioVisto);
 
+// Encuestas
+router.post('/:id/votar', ctrl.votarEncuesta);
+
+// Fijar
+router.patch('/:id/fijar', ctrl.fijarPublicacion);
+
 // Reacciones
 router.post('/:id/reaccionar', ctrl.reaccionar);
 router.get('/:id/reacciones/resumen', ctrl.getReaccionesSummary);
