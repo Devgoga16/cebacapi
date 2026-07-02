@@ -35,6 +35,7 @@ const penasRoutes = require('./routes/penasRoutes');
 const correoMasivoRoutes = require('./routes/correoMasivoRoutes');
 const feedRoutes = require('./routes/feedRoutes');
 const notificacionesRoutes = require('./routes/notificacionesRoutes');
+const chatAulaRoutes = require('./routes/chatAulaRoutes');
 
 const app = express();
 app.use(cors());
@@ -138,6 +139,8 @@ app.use('/feed', feedRoutes);
 app.use('/api/feed', feedRoutes);
 app.use('/notificaciones', notificacionesRoutes);
 app.use('/api/notificaciones', notificacionesRoutes);
+app.use('/chat-aula', chatAulaRoutes);
+app.use('/api/chat-aula', chatAulaRoutes);
 
 // Middleware de manejo de errores
 app.use(errorHandler);
