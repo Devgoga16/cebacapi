@@ -56,21 +56,31 @@ async function computeDestinatarios(autorId, tipo, aulasDestino = []) {
   }
 
   if (tipo === 'aula_especifica') {
+    const aulas = await Aula.find({ _id: { $in: aulasDestino } }).select('id_profesor id_coordinador').lean();
     const rels = await AulaAlumno.find({ id_aula: { $in: aulasDestino }, estado: { $in: ESTADOS_ACTIVOS } }).select('id_alumno').lean();
-    const ids = [...new Set(rels.map(r => String(r.id_alumno)))];
-    return ids.map(id => new mongoose.Types.ObjectId(id));
+    const ids = new Set(rels.map(r => String(r.id_alumno)));
+    aulas.forEach(a => {
+      if (a.id_profesor) ids.add(String(a.id_profesor));
+      if (a.id_coordinador) ids.add(String(a.id_coordinador));
+    });
+    ids.delete(String(autorId));
+    return [...ids].map(id => new mongoose.Types.ObjectId(id));
   }
 
   if (tipo === 'mi_aula') {
     const misAulas = await AulaAlumno.find({ id_alumno: autorId, estado: { $in: ESTADOS_ACTIVOS } }).select('id_aula').lean();
     const aulaIds = misAulas.map(a => a.id_aula);
-    const rels = await AulaAlumno.find({
-      id_aula: { $in: aulaIds },
-      id_alumno: { $ne: autorId },
-      estado: { $in: ESTADOS_ACTIVOS },
-    }).select('id_alumno').lean();
-    const ids = [...new Set(rels.map(r => String(r.id_alumno)))];
-    return ids.map(id => new mongoose.Types.ObjectId(id));
+    const [aulas, rels] = await Promise.all([
+      Aula.find({ _id: { $in: aulaIds } }).select('id_profesor id_coordinador').lean(),
+      AulaAlumno.find({ id_aula: { $in: aulaIds }, id_alumno: { $ne: autorId }, estado: { $in: ESTADOS_ACTIVOS } }).select('id_alumno').lean(),
+    ]);
+    const ids = new Set(rels.map(r => String(r.id_alumno)));
+    aulas.forEach(a => {
+      if (a.id_profesor) ids.add(String(a.id_profesor));
+      if (a.id_coordinador) ids.add(String(a.id_coordinador));
+    });
+    ids.delete(String(autorId));
+    return [...ids].map(id => new mongoose.Types.ObjectId(id));
   }
 
   return [];
@@ -292,13 +302,27 @@ exports.marcarAnuncioVisto = async (publicacion_id, persona_id) => {
 exports.getMisAulas = async (personaId, autorRol) => {
   if (autorRol === 'Docente') {
     return await Aula.find({ id_profesor: personaId })
-      .populate('id_curso', 'nombre')
+      .populate('id_curso', 'nombre_curso')
       .populate('id_ciclo', 'nombre_ciclo')
       .lean();
   }
   if (autorRol === 'Coordinador') {
     return await Aula.find({ id_coordinador: personaId })
-      .populate('id_curso', 'nombre')
+      .populate('id_curso', 'nombre_curso')
+      .populate('id_ciclo', 'nombre_ciclo')
+      .lean();
+  }
+  if (autorRol === 'Estudiante') {
+    const Ciclo = require('../models/ciclo');
+    const ESTADOS_ACTIVOS = ['en curso', 'inscrito', 'aprobado', 'pendiente'];
+    const cicloActual = await Ciclo.findOne({ actual: true }).select('_id').lean();
+    const rels = await AulaAlumno.find({ id_alumno: personaId, estado: { $in: ESTADOS_ACTIVOS } }).select('id_aula').lean();
+    const aulaIds = rels.map(r => r.id_aula);
+    if (!aulaIds.length) return [];
+    const aulaFilter = { _id: { $in: aulaIds } };
+    if (cicloActual) aulaFilter.id_ciclo = cicloActual._id;
+    return await Aula.find(aulaFilter)
+      .populate('id_curso', 'nombre_curso')
       .populate('id_ciclo', 'nombre_ciclo')
       .lean();
   }
