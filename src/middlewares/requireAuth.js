@@ -13,6 +13,7 @@ const PREFIJOS_PUBLICOS = [
   '/api/api-docs',
   '/status',
   '/api/status',
+  '/iglesias/con-ministerios'
 ];
 
 function esRutaPublica(path) {
