@@ -66,13 +66,28 @@ function normalizeAulaFields(body) {
     body.numeroAula = body.numero_aula;
     delete body.numero_aula;
   }
-  // id_coordinador es opcional: si llega vacío ('' o null), se guarda como null
-  // en vez de intentar castear un string vacío a ObjectId (lo cual falla).
   if ('id_coordinador' in body && !body.id_coordinador) {
     body.id_coordinador = null;
   }
+  if ('id_cotutor' in body && !body.id_cotutor) {
+    body.id_cotutor = null;
+  }
   return body;
 }
+
+exports.asignarCotutor = async (req, res, next) => {
+  try {
+    const Aula = require('../models/aula');
+    const { id_cotutor } = req.body; // null para quitar co-tutor
+    const aula = await Aula.findByIdAndUpdate(
+      req.params.id,
+      { id_cotutor: id_cotutor || null },
+      { new: true }
+    ).populate('id_profesor id_coordinador id_cotutor id_curso id_ciclo');
+    if (!aula) return sendResponse(res, { state: 'failed', message: 'Aula no encontrada', action_code: 404 });
+    sendResponse(res, { data: aula, message: id_cotutor ? 'Co-tutor asignado' : 'Co-tutor removido' });
+  } catch (err) { next(err); }
+};
 
 exports.updateAula = async (req, res, next) => {
   try {

@@ -132,7 +132,7 @@ exports.getAllAulas = async () => {
 };
 
 exports.getAulaById = async (id) => {
-  return await Aula.findById(id).populate('id_profesor id_coordinador id_curso id_ciclo');
+  return await Aula.findById(id).populate('id_profesor id_coordinador id_cotutor id_curso id_ciclo');
 };
 
 exports.createAula = async (data) => {
@@ -142,7 +142,7 @@ exports.createAula = async (data) => {
 };
 
 exports.updateAula = async (id, data) => {
-  return await Aula.findByIdAndUpdate(id, data, { new: true }).populate('id_profesor id_coordinador id_curso id_ciclo');
+  return await Aula.findByIdAndUpdate(id, data, { new: true }).populate('id_profesor id_coordinador id_cotutor id_curso id_ciclo');
 };
 
 exports.deleteAula = async (id) => {
@@ -531,6 +531,7 @@ exports.getDocenteResumenAula = async (idAula, fecha) => {
         { path: 'id_curso', populate: { path: 'id_nivel' } },
         { path: 'id_ciclo' },
         { path: 'id_profesor', select: '-imagen' },
+        { path: 'id_cotutor', select: 'nombres apellido_paterno apellido_materno' },
       ])
       .lean(),
     AulaAlumno.find({ id_aula: idAula })
@@ -652,12 +653,13 @@ exports.getAulasPorProfesorAgrupadasPorCiclo = async (id_persona) => {
     throw err;
   }
 
-  const aulas = await Aula.find({ id_profesor: id_persona })
+  const aulas = await Aula.find({ $or: [{ id_profesor: id_persona }, { id_cotutor: id_persona }] })
     .populate({
       path: 'id_curso',
       populate: { path: 'id_nivel' }
     })
     .populate('id_ciclo')
+    .populate('id_cotutor', 'nombres apellido_paterno')
     .lean();
 
   // Agrupar por ciclo

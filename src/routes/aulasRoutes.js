@@ -238,6 +238,7 @@ router.post('/aulas', aulasController.createAula);
  *                   type: integer
  */
 router.put('/aulas/:id', aulasController.updateAula);
+router.patch('/aulas/:id/cotutor', aulasController.asignarCotutor);
 
 /**
  * @swagger

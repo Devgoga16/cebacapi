@@ -4,6 +4,7 @@ const AulaSchema = new mongoose.Schema({
   es_presencial: { type: Boolean, required: true },
   id_profesor: { type: mongoose.Schema.Types.ObjectId, ref: 'Persona', required: true },
   id_coordinador: { type: mongoose.Schema.Types.ObjectId, ref: 'Persona', required: false },
+  id_cotutor: { type: mongoose.Schema.Types.ObjectId, ref: 'Persona', default: null },
   id_curso: { type: mongoose.Schema.Types.ObjectId, ref: 'Curso', required: true },
   dia: { type: String, required: true },
   hora_inicio: { type: String, required: true },

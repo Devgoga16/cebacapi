@@ -56,7 +56,7 @@ exports.getDocenteDashboard = async (id_persona) => {
   let aulas = [];
   let total_alumnos = 0;
   if (cicloActual) {
-    const aulasDocs = await Aula.find({ id_profesor: id_persona, id_ciclo: cicloActual._id })
+    const aulasDocs = await Aula.find({ $or: [{ id_profesor: id_persona }, { id_cotutor: id_persona }], id_ciclo: cicloActual._id })
       .populate({
         path: 'id_curso',
         populate: { path: 'id_nivel' }

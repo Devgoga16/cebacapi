@@ -19,9 +19,11 @@ async function verificarAcceso(aulaId, personaId) {
 
   const esDocente = String(aula.id_profesor) === String(personaId);
   const esCoord = aula.id_coordinador && String(aula.id_coordinador) === String(personaId);
+  const esCotutor = aula.id_cotutor && String(aula.id_cotutor) === String(personaId);
 
   if (esDocente) return { rol: 'Docente', aula };
   if (esCoord) return { rol: 'Coordinador', aula };
+  if (esCotutor) return { rol: 'Co-tutor', aula };
 
   return null;
 }
