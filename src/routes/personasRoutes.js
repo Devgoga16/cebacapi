@@ -765,5 +765,6 @@ router.get('/personas/buscar', personasController.buscarPersonas);
  *                   example: 500
  */
 router.get('/personas/:id/inscripciones', personasController.getInscripcionesByPersona);
+router.patch('/personas/:id/tutorial', personasController.marcarTutorialVisto);
 
 module.exports = router;

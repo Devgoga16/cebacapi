@@ -100,6 +100,10 @@ const PersonaSchema = new mongoose.Schema(
     }
   },
   {
+    tutorial_visto: { type: Boolean, default: false },
+    tutorial_visto_at: { type: Date, default: null },
+  },
+  {
     collection: 'personas',
     timestamps: true,
   }

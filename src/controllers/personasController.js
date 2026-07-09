@@ -122,6 +122,21 @@ exports.importarPersonasExcel = async (req, res, next) => {
   }
 };
 
+exports.marcarTutorialVisto = async (req, res, next) => {
+  try {
+    const Persona = require('../models/persona');
+    const persona = await Persona.findByIdAndUpdate(
+      req.params.id,
+      { tutorial_visto: true, tutorial_visto_at: new Date() },
+      { new: true, select: 'tutorial_visto tutorial_visto_at' }
+    );
+    if (!persona) return sendResponse(res, { state: 'failed', data: null, message: 'Persona no encontrada', action_code: 404 });
+    sendResponse(res, { data: persona, message: 'Tutorial marcado como visto' });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getInscripcionesByPersona = async (req, res, next) => {
   try {
     const inscripciones = await personasService.getInscripcionesByPersona(req.params.id);
