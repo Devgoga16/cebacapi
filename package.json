@@ -9,6 +9,8 @@
     "migrate:persona-apellidos": "node scripts/migrate_persona_apellidos.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1084.0",
+    "@aws-sdk/s3-request-presigner": "^3.1084.0",
     "adm-zip": "^0.5.17",
     "axios": "^1.13.1",
     "bcrypt": "^6.0.0",
@@ -21,10 +23,11 @@
     "form-data": "^4.0.4",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^7.6.0",
-    "multer": "^2.0.2",
+    "multer": "^2.2.0",
     "sharp": "^0.33.4",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
+    "uuid": "^14.0.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

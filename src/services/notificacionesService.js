@@ -133,6 +133,7 @@ exports.getNotificaciones = async (destinatario_id, { page = 1, limit = 20, solo
     Notificacion.find(filtro)
       .populate('actor_id', 'nombres apellido_paterno imagen')
       .populate('publicacion_id', 'contenido autor_rol')
+      .populate('recurso_id', 'titulo id_aula')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(Number(limit))
