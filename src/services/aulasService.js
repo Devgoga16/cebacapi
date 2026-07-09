@@ -249,7 +249,7 @@ function normalizarFechaUTC(dateInput) {
  * contiene `fechaRef` (domingo a sábado), lista las aulas que dictan clase ese
  * día con su horario, e indica si ya se registró asistencia en esa fecha puntual.
  */
-exports.getCalendarioSemana = async (fechaRef) => {
+exports.getCalendarioSemana = async (fechaRef, cicloId) => {
   const ref = normalizarFechaUTC(fechaRef);
   const diaSemanaRef = ref.getUTCDay();
   const inicioSemana = new Date(ref);
@@ -261,7 +261,10 @@ exports.getCalendarioSemana = async (fechaRef) => {
     return d;
   });
 
-  const cicloActual = await Ciclo.findOne({ actual: true }).lean();
+  const cicloActual = cicloId
+    ? await Ciclo.findById(cicloId).lean()
+    : await Ciclo.findOne({ actual: true }).lean();
+
   if (!cicloActual) {
     return {
       ciclo: null,

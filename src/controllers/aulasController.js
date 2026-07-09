@@ -14,8 +14,8 @@ exports.getAllAulas = async (req, res, next) => {
 
 exports.getCalendarioSemana = async (req, res, next) => {
   try {
-    const { fecha } = req.query;
-    const data = await aulasService.getCalendarioSemana(fecha);
+    const { fecha, cicloId } = req.query;
+    const data = await aulasService.getCalendarioSemana(fecha, cicloId);
     sendResponse(res, { data, message: 'Calendario semanal obtenido correctamente' });
   } catch (err) {
     next(err);
