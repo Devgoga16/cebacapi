@@ -61,7 +61,7 @@ const swaggerOptions = {
     openapi: '3.0.0',
     info: {
       title: 'Cebac API',
-      version: '1.0.0',
+      version: '2.0.0',
       description: 'API de ejemplo con Express y Swagger',
     },
   },
