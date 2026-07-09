@@ -1,6 +1,6 @@
 const { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID } = require('crypto');
 const path = require('path');
 
 // Inicialización lazy para que dotenv ya haya cargado las vars
@@ -22,7 +22,7 @@ function getClient() {
 
 async function uploadBuffer(buffer, originalname, mimetype, folder = 'recursos') {
   const ext = path.extname(originalname) || '';
-  const key = `${folder}/${uuidv4()}${ext}`;
+  const key = `${folder}/${randomUUID()}${ext}`;
 
   await getClient().send(new PutObjectCommand({
     Bucket: process.env.R2_BUCKET_NAME,
