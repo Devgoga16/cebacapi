@@ -13,6 +13,8 @@ const PREFIJOS_PUBLICOS = [
   '/api/api-docs',
   '/status',
   '/api/status',
+  '/iglesias/con-ministerios',
+  '/usuarios/with-persona'
 ];
 
 function esRutaPublica(path) {
