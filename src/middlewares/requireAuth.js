@@ -14,7 +14,9 @@ const PREFIJOS_PUBLICOS = [
   '/status',
   '/api/status',
   '/iglesias/con-ministerios',
-  '/usuarios/with-persona'
+  '/usuarios/with-persona',
+  '/reportes/',
+  '/api/reportes/',
 ];
 
 function esRutaPublica(path) {
