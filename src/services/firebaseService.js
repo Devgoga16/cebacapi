@@ -1,11 +1,12 @@
 const path = require('path');
-const admin = require('firebase-admin');
+const { initializeApp, cert } = require('firebase-admin/app');
+const { getMessaging } = require('firebase-admin/messaging');
 const FcmToken = require('../models/fcmToken');
 
-// Inicializa Firebase Admin SDK
-let initialized = false;
+let messaging = null;
+
 function initFirebase() {
-  if (initialized) return;
+  if (messaging) return;
   try {
     let serviceAccount;
     if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
@@ -15,22 +16,16 @@ function initFirebase() {
     } else {
       serviceAccount = require(path.join(__dirname, '..', '..', 'serviceAccountKey.json'));
     }
-    admin.initializeApp({
-      credential: admin.cert(serviceAccount),
-    });
-    initialized = true;
+    const app = initializeApp({ credential: cert(serviceAccount) });
+    messaging = getMessaging(app);
     console.log('[firebase] Admin SDK inicializado');
   } catch (err) {
     console.warn('[firebase] No se pudo inicializar Firebase Admin:', err.message);
-    console.warn('[firebase] Las notificaciones push no funcionarán hasta configurar serviceAccountKey.json');
   }
 }
 
 initFirebase();
 
-/**
- * Registra o actualiza un token FCM para una persona.
- */
 exports.registrarToken = async (persona_id, token, platform = 'android') => {
   await FcmToken.findOneAndUpdate(
     { token },
@@ -39,33 +34,19 @@ exports.registrarToken = async (persona_id, token, platform = 'android') => {
   );
 };
 
-/**
- * Envía una notificación push a una persona.
- */
 exports.enviarPushAPersona = async (persona_id, { titulo, cuerpo, data = {} }) => {
-  if (!initialized) return;
+  if (!messaging) return;
   try {
     const tokens = await FcmToken.find({ persona_id, activo: true }).select('token').lean();
     if (!tokens.length) return;
 
     const fcmTokens = tokens.map(t => t.token);
-
-    const message = {
-      notification: {
-        title: titulo,
-        body: cuerpo,
-      },
-      data: Object.fromEntries(
-        Object.entries(data).map(([k, v]) => [k, String(v)])
-      ),
-    };
-
-    const response = await admin.messaging().sendEachForMulticast({
+    const response = await messaging.sendEachForMulticast({
       tokens: fcmTokens,
-      ...message,
+      notification: { title: titulo, body: cuerpo },
+      data: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])),
     });
 
-    // Desactivar tokens inválidos
     response.responses.forEach((resp, i) => {
       if (!resp.success && resp.error?.code === 'messaging/registration-token-not-registered') {
         FcmToken.updateOne({ token: fcmTokens[i] }, { activo: false }).catch(() => {});
@@ -76,11 +57,8 @@ exports.enviarPushAPersona = async (persona_id, { titulo, cuerpo, data = {} }) =
   }
 };
 
-/**
- * Envía push a múltiples personas.
- */
 exports.enviarPushAMuchos = async (personaIds, { titulo, cuerpo, data = {} }) => {
-  if (!initialized || !personaIds.length) return;
+  if (!messaging || !personaIds.length) return;
   try {
     const tokens = await FcmToken.find({
       persona_id: { $in: personaIds },
@@ -90,16 +68,12 @@ exports.enviarPushAMuchos = async (personaIds, { titulo, cuerpo, data = {} }) =>
     if (!tokens.length) return;
 
     const fcmTokens = tokens.map(t => t.token);
-
-    // Firebase permite max 500 tokens por batch
     for (let i = 0; i < fcmTokens.length; i += 500) {
       const batch = fcmTokens.slice(i, i + 500);
-      const response = await admin.messaging().sendEachForMulticast({
+      const response = await messaging.sendEachForMulticast({
         tokens: batch,
         notification: { title: titulo, body: cuerpo },
-        data: Object.fromEntries(
-          Object.entries(data).map(([k, v]) => [k, String(v)])
-        ),
+        data: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])),
       });
 
       response.responses.forEach((resp, j) => {
