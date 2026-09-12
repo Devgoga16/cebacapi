@@ -16,7 +16,7 @@ function initFirebase() {
       serviceAccount = require(path.join(__dirname, '..', '..', 'serviceAccountKey.json'));
     }
     admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+      credential: admin.cert(serviceAccount),
     });
     initialized = true;
     console.log('[firebase] Admin SDK inicializado');
