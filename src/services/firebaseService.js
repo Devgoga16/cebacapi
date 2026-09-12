@@ -80,9 +80,15 @@ exports.enviarPushAMuchos = async (personaIds, { titulo, cuerpo, data = {} }) =>
         data: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])),
       });
 
+      const ok = response.responses.filter(r => r.success).length;
+      const fail = response.responses.filter(r => !r.success).length;
+      console.log('[firebase] Resultado envío:', ok, 'exitosos,', fail, 'fallidos');
       response.responses.forEach((resp, j) => {
-        if (!resp.success && resp.error?.code === 'messaging/registration-token-not-registered') {
-          FcmToken.updateOne({ token: batch[j] }, { activo: false }).catch(() => {});
+        if (!resp.success) {
+          console.log('[firebase] Fallo token', j, ':', resp.error?.code, resp.error?.message);
+          if (resp.error?.code === 'messaging/registration-token-not-registered') {
+            FcmToken.updateOne({ token: batch[j] }, { activo: false }).catch(() => {});
+          }
         }
       });
     }
