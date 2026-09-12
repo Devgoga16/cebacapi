@@ -1,6 +1,11 @@
+const mongoose = require('mongoose');
 const asistenciasService = require('../services/asistenciasService');
 const { sendResponse } = require('../utils/helpers');
 const audit = require('../services/auditService');
+const firebase = require('../services/firebaseService');
+const Aula = mongoose.models.Aula || require('../models/aula');
+const Curso = mongoose.models.Curso || require('../models/curso');
+const Persona = mongoose.models.Persona || require('../models/persona');
 
 exports.getRosterDeAulaParaAsistencia = async (req, res, next) => {
   try {
@@ -27,6 +32,33 @@ exports.tomarAsistencia = async (req, res, next) => {
       user_agent: req.headers['user-agent'],
     });
     sendResponse(res, { data: result, message: 'Asistencia registrada' });
+
+    // Push notification a los alumnos
+    (async () => {
+      try {
+        if (!items || !items.length) return;
+        const aulaId = items[0].id_aula;
+        const aula = await Aula.findById(aulaId).select('id_curso').lean();
+        let courseName = 'tu aula';
+        if (aula?.id_curso) {
+          const curso = await Curso.findById(aula.id_curso).select('nombre_curso').lean();
+          if (curso) courseName = curso.nombre_curso;
+        }
+        let docenteNombre = 'El docente';
+        if (tomado_por) {
+          const p = await Persona.findById(tomado_por).select('nombres apellido_paterno').lean();
+          if (p) docenteNombre = `${p.nombres || ''} ${p.apellido_paterno || ''}`.trim();
+        }
+        const alumnoIds = items.map(i => i.id_alumno).filter(Boolean);
+        if (alumnoIds.length) {
+          firebase.enviarPushAMuchos(alumnoIds, {
+            titulo: `Asistencia registrada`,
+            cuerpo: `${docenteNombre} registró asistencia en ${courseName}`,
+            data: { tipo: 'asistencia', aula_id: String(aulaId) },
+          });
+        }
+      } catch {}
+    })();
   } catch (err) { next(err); }
 };
 

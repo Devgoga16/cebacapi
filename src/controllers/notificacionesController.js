@@ -1,5 +1,17 @@
 const notifService = require('../services/notificacionesService');
+const firebaseService = require('../services/firebaseService');
 const { sendResponse } = require('../utils/helpers');
+
+exports.registrarToken = async (req, res, next) => {
+  try {
+    const { persona_id, token, platform } = req.body;
+    if (!persona_id || !token) {
+      return res.status(400).json({ state: false, message: 'persona_id y token son requeridos' });
+    }
+    await firebaseService.registrarToken(persona_id, token, platform);
+    sendResponse(res, { data: null, message: 'Token registrado' });
+  } catch (err) { next(err); }
+};
 
 exports.getNotificaciones = async (req, res, next) => {
   try {

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const ctrl = require('../controllers/notificacionesController');
 
+router.post('/registrar-token', ctrl.registrarToken);
 router.get('/:id_persona', ctrl.getNotificaciones);
 router.get('/:id_persona/count', ctrl.contarNoLeidas);
 router.patch('/:id_persona/leer-todas', ctrl.marcarTodasLeidas);

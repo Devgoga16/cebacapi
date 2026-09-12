@@ -37,6 +37,8 @@ const feedRoutes = require('./routes/feedRoutes');
 const notificacionesRoutes = require('./routes/notificacionesRoutes');
 const chatAulaRoutes = require('./routes/chatAulaRoutes');
 const recursosRoutes = require('./routes/recursosRoutes');
+const gruposEvaluacionRoutes = require('./routes/gruposEvaluacionRoutes');
+const evaluacionesDocenteRoutes = require('./routes/evaluacionesDocenteRoutes');
 
 const app = express();
 app.use(cors());
@@ -144,6 +146,10 @@ app.use('/chat-aula', chatAulaRoutes);
 app.use('/api/chat-aula', chatAulaRoutes);
 app.use('/', recursosRoutes);
 app.use('/api', recursosRoutes);
+app.use('/', gruposEvaluacionRoutes);
+app.use('/api', gruposEvaluacionRoutes);
+app.use('/', evaluacionesDocenteRoutes);
+app.use('/api', evaluacionesDocenteRoutes);
 
 // Middleware de manejo de errores
 app.use(errorHandler);

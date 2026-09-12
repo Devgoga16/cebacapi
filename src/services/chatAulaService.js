@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const MensajeAula = require('../models/mensajeAula');
 const Aula        = mongoose.models.Aula        || require('../models/aula');
 const AulaAlumno  = mongoose.models.AulaAlumno  || require('../models/aulaAlumno');
+const Curso       = mongoose.models.Curso       || require('../models/curso');
+const firebase    = require('./firebaseService');
 
 // Verifica que una persona pertenece al aula (como alumno, docente o coordinador)
 async function verificarAcceso(aulaId, personaId) {
@@ -61,8 +63,51 @@ exports.enviarMensaje = async (aulaId, personaId, nombrePersona, contenido) => {
     contenido: contenido.trim(),
   });
 
+  // Push notification a los demás miembros del aula
+  notificarChatAula(aulaId, personaId, nombrePersona, contenido.trim()).catch(() => {});
+
   return mensaje;
 };
+
+async function notificarChatAula(aulaId, autorId, autorNombre, contenido) {
+  try {
+    const aula = await Aula.findById(aulaId).select('id_profesor id_coordinador id_cotutor id_curso').lean();
+    if (!aula) return;
+
+    // Obtener nombre del curso
+    let courseName = 'el aula';
+    if (aula.id_curso) {
+      const curso = await Curso.findById(aula.id_curso).select('nombre_curso').lean();
+      if (curso) courseName = curso.nombre_curso;
+    }
+
+    // Recopilar todos los miembros del aula
+    const miembros = new Set();
+    if (aula.id_profesor) miembros.add(String(aula.id_profesor));
+    if (aula.id_coordinador) miembros.add(String(aula.id_coordinador));
+    if (aula.id_cotutor) miembros.add(String(aula.id_cotutor));
+
+    const alumnos = await AulaAlumno.find({
+      id_aula: aulaId,
+      estado: { $in: ['inscrito', 'en curso', 'aprobado'] },
+    }).select('id_alumno').lean();
+    alumnos.forEach(a => miembros.add(String(a.id_alumno)));
+
+    // Excluir al autor
+    miembros.delete(String(autorId));
+
+    if (miembros.size === 0) return;
+
+    const preview = contenido.length > 80 ? contenido.substring(0, 80) + '...' : contenido;
+    firebase.enviarPushAMuchos([...miembros], {
+      titulo: `${autorNombre} en ${courseName}`,
+      cuerpo: preview,
+      data: { tipo: 'chat_aula', aula_id: String(aulaId) },
+    });
+  } catch (err) {
+    console.error('[chat-push] Error:', err.message);
+  }
+}
 
 exports.eliminarMensaje = async (mensajeId, personaId) => {
   const mensaje = await MensajeAula.findById(mensajeId);

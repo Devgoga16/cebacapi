@@ -1,6 +1,11 @@
+const mongoose = require('mongoose');
 const calificacionesService = require('../services/calificacionesService');
 const { sendResponse } = require('../utils/helpers');
 const audit = require('../services/auditService');
+const firebase = require('../services/firebaseService');
+const Aula = mongoose.models.Aula || require('../models/aula');
+const Curso = mongoose.models.Curso || require('../models/curso');
+const Persona = mongoose.models.Persona || require('../models/persona');
 
 exports.getRosterDeAulaParaCalificaciones = async (req, res, next) => {
   try {
@@ -25,6 +30,33 @@ exports.registrarCalificaciones = async (req, res, next) => {
       user_agent: req.headers['user-agent'],
     });
     sendResponse(res, { data: result, message: 'Calificaciones registradas exitosamente' });
+
+    // Push notification a los alumnos
+    (async () => {
+      try {
+        if (!items || !items.length) return;
+        const aulaId = items[0].id_aula;
+        const aula = await Aula.findById(aulaId).select('id_curso').lean();
+        let courseName = 'tu aula';
+        if (aula?.id_curso) {
+          const curso = await Curso.findById(aula.id_curso).select('nombre_curso').lean();
+          if (curso) courseName = curso.nombre_curso;
+        }
+        let docenteNombre = 'El docente';
+        if (registrado_por) {
+          const p = await Persona.findById(registrado_por).select('nombres apellido_paterno').lean();
+          if (p) docenteNombre = `${p.nombres || ''} ${p.apellido_paterno || ''}`.trim();
+        }
+        const alumnoIds = [...new Set(items.map(i => i.id_alumno).filter(Boolean))];
+        if (alumnoIds.length) {
+          firebase.enviarPushAMuchos(alumnoIds, {
+            titulo: 'Nuevas calificaciones',
+            cuerpo: `${docenteNombre} registró notas en ${courseName}`,
+            data: { tipo: 'calificacion', aula_id: String(aulaId) },
+          });
+        }
+      } catch {}
+    })();
   } catch (err) { next(err); }
 };
 

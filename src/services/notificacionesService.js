@@ -3,6 +3,15 @@ const Publicacion = require('../models/publicacion');
 const Persona = require('../models/persona');
 const Usuario = require('../models/usuario');
 const Rol = require('../models/rol');
+const firebase = require('./firebaseService');
+
+async function getNombrePersona(personaId) {
+  try {
+    const p = await Persona.findById(personaId).select('nombres apellido_paterno').lean();
+    if (p) return `${p.nombres || ''} ${p.apellido_paterno || ''}`.trim();
+  } catch {}
+  return 'Alguien';
+}
 
 /**
  * Crea notificaciones cuando alguien reacciona a una publicación.
@@ -12,7 +21,7 @@ exports.notificarReaccion = async ({ publicacion_id, actor_id, actor_rol, reacci
   try {
     const pub = await Publicacion.findById(publicacion_id).select('autor_id').lean();
     if (!pub) return;
-    if (String(pub.autor_id) === String(actor_id)) return; // no auto-notificar
+    if (String(pub.autor_id) === String(actor_id)) return;
 
     const emojis = { me_gusta: '👍', me_encanta: '❤️', me_asombra: '😲', me_bendice: '🙏' };
     await Notificacion.create({
@@ -23,7 +32,14 @@ exports.notificarReaccion = async ({ publicacion_id, actor_id, actor_rol, reacci
       actor_rol,
       mensaje: `reaccionó con ${emojis[reaccion] || reaccion} a tu publicación`,
     });
-  } catch { /* no interrumpir el flujo principal */ }
+
+    const nombre = await getNombrePersona(actor_id);
+    firebase.enviarPushAPersona(pub.autor_id, {
+      titulo: 'Nueva reacción',
+      cuerpo: `${nombre} ${emojis[reaccion] || ''} reaccionó a tu publicación`,
+      data: { tipo: 'reaccion', publicacion_id: String(publicacion_id) },
+    });
+  } catch {}
 };
 
 /**
@@ -42,6 +58,13 @@ exports.notificarComentario = async ({ publicacion_id, actor_id, actor_rol }) =>
       actor_id,
       actor_rol,
       mensaje: 'comentó tu publicación',
+    });
+
+    const nombre = await getNombrePersona(actor_id);
+    firebase.enviarPushAPersona(pub.autor_id, {
+      titulo: 'Nuevo comentario',
+      cuerpo: `${nombre} comentó tu publicación`,
+      data: { tipo: 'comentario', publicacion_id: String(publicacion_id) },
     });
   } catch {}
 };
@@ -108,6 +131,17 @@ exports.notificarNuevaPublicacion = async ({ publicacion_id, autor_id, autor_rol
     console.log('[notif] docs a insertar:', docs.length);
     if (docs.length > 0) await Notificacion.insertMany(docs, { ordered: false });
     console.log('[notif] notificaciones de publicacion creadas OK:', docs.length);
+
+    // Enviar push a todos los destinatarios
+    if (docs.length > 0) {
+      const nombre = await getNombrePersona(autor_id);
+      const destIds = docs.map(d => d.destinatario_id);
+      firebase.enviarPushAMuchos(destIds, {
+        titulo: 'Nueva publicación',
+        cuerpo: `${nombre} publicó algo nuevo`,
+        data: { tipo: 'publicacion', publicacion_id: String(publicacion_id) },
+      });
+    }
   } catch (err) {
     console.error('[notif] ERROR en notificarNuevaPublicacion:', err.message, err.stack?.slice(0, 300));
   }
