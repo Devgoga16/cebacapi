@@ -1,13 +1,18 @@
+const path = require('path');
 const admin = require('firebase-admin');
 const FcmToken = require('../models/fcmToken');
 
 // Inicializa Firebase Admin SDK
-// Usa la variable de entorno GOOGLE_APPLICATION_CREDENTIALS o el archivo serviceAccountKey.json
 let initialized = false;
 function initFirebase() {
   if (initialized) return;
   try {
-    const serviceAccount = require('../../serviceAccountKey.json');
+    let serviceAccount;
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    } else {
+      serviceAccount = require(path.join(__dirname, '..', '..', 'serviceAccountKey.json'));
+    }
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
     });
