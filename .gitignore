@@ -11,6 +11,9 @@ yarn-error.log*
 # Environment variables
 .env
 
+# Firebase credentials
+serviceAccountKey.json
+
 # OS files
 .DS_Store
 Thumbs.db
