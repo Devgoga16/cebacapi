@@ -8,7 +8,9 @@ exports.registrarToken = async (req, res, next) => {
     if (!persona_id || !token) {
       return res.status(400).json({ state: false, message: 'persona_id y token son requeridos' });
     }
+    console.log('[push] Registrando token para persona:', persona_id, 'platform:', platform);
     await firebaseService.registrarToken(persona_id, token, platform);
+    console.log('[push] Token registrado OK');
     sendResponse(res, { data: null, message: 'Token registrado' });
   } catch (err) { next(err); }
 };

@@ -35,9 +35,11 @@ exports.registrarToken = async (persona_id, token, platform = 'android') => {
 };
 
 exports.enviarPushAPersona = async (persona_id, { titulo, cuerpo, data = {} }) => {
+  console.log('[firebase] enviarPushAPersona llamado, persona:', persona_id, 'messaging?', !!messaging);
   if (!messaging) return;
   try {
     const tokens = await FcmToken.find({ persona_id, activo: true }).select('token').lean();
+    console.log('[firebase] Tokens encontrados para persona', persona_id, ':', tokens.length);
     if (!tokens.length) return;
 
     const fcmTokens = tokens.map(t => t.token);
@@ -58,6 +60,7 @@ exports.enviarPushAPersona = async (persona_id, { titulo, cuerpo, data = {} }) =
 };
 
 exports.enviarPushAMuchos = async (personaIds, { titulo, cuerpo, data = {} }) => {
+  console.log('[firebase] enviarPushAMuchos llamado, personas:', personaIds.length, 'messaging?', !!messaging);
   if (!messaging || !personaIds.length) return;
   try {
     const tokens = await FcmToken.find({
@@ -65,6 +68,7 @@ exports.enviarPushAMuchos = async (personaIds, { titulo, cuerpo, data = {} }) =>
       activo: true,
     }).select('token').lean();
 
+    console.log('[firebase] Tokens encontrados para', personaIds.length, 'personas:', tokens.length);
     if (!tokens.length) return;
 
     const fcmTokens = tokens.map(t => t.token);
