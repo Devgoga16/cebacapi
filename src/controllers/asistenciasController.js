@@ -103,3 +103,23 @@ exports.getAlumnosPorMinisterioPorCiclo = async (req, res, next) => {
     sendResponse(res, { data });
   } catch (err) { next(err); }
 };
+
+exports.qrCheckin = async (req, res, next) => {
+  try {
+    const { id_aula, id_alumno, tomado_por } = req.body || {};
+    if (!id_aula || !id_alumno || !tomado_por) {
+      return sendResponse(res, { data: null, message: 'Faltan campos requeridos' }, 400);
+    }
+    const data = await asistenciasService.qrCheckin({ id_aula, id_alumno, tomado_por });
+    audit.registrar({
+      accion: 'ASISTENCIA_QR',
+      entidad: 'Asistencia',
+      actor: req.actor,
+      descripcion: `Asistencia QR: alumno ${id_alumno} en aula ${id_aula}`,
+      payload: { id_aula, id_alumno, tomado_por },
+      ip: req.ip,
+      user_agent: req.headers['user-agent'],
+    });
+    sendResponse(res, { data, message: 'Asistencia registrada por QR' });
+  } catch (err) { next(err); }
+};

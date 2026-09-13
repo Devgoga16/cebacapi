@@ -578,3 +578,24 @@ exports.getAlumnosPorMinisterioPorCiclo = async (id_ciclo) => {
 
   return resultado;
 };
+
+exports.qrCheckin = async ({ id_aula, id_alumno, tomado_por }) => {
+  const matricula = await AulaAlumno.findOne({ id_aula, id_alumno }).lean();
+  if (!matricula) throw Object.assign(new Error('El alumno no está matriculado en esta aula'), { status: 400 });
+
+  const fecha = obtenerHoyLimaUTC();
+  const existente = await Asistencia.findOne({ id_aula, id_alumno, fecha }).lean();
+  if (existente) {
+    return { ya_registrado: true, estado: existente.estado, fecha };
+  }
+
+  await Asistencia.create({ id_aula, id_alumno, fecha, estado: 'presente', tomado_por });
+
+  const alumno = await Persona.findById(id_alumno).select('nombres apellido_paterno').lean();
+  return {
+    ya_registrado: false,
+    estado: 'presente',
+    fecha,
+    alumno: alumno ? `${alumno.nombres || ''} ${alumno.apellido_paterno || ''}`.trim() : id_alumno,
+  };
+};

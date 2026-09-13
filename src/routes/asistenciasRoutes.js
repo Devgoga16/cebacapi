@@ -409,4 +409,32 @@ router.get('/asistencias/reporte/ciclo/:id_ciclo', asistenciasController.getRepo
  */
 router.get('/asistencias/alumnos-por-ministerio/ciclo/:id_ciclo', asistenciasController.getAlumnosPorMinisterioPorCiclo);
 
+/**
+ * @swagger
+ * /asistencias/qr-checkin:
+ *   post:
+ *     summary: Registra asistencia de un alumno vía escaneo QR (marca "presente" para hoy)
+ *     tags: [Asistencias]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [id_aula, id_alumno, tomado_por]
+ *             properties:
+ *               id_aula:
+ *                 type: string
+ *               id_alumno:
+ *                 type: string
+ *               tomado_por:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Asistencia registrada
+ *       400:
+ *         description: Alumno no pertenece al aula o ya tiene asistencia hoy
+ */
+router.post('/asistencias/qr-checkin', asistenciasController.qrCheckin);
+
 module.exports = router;
